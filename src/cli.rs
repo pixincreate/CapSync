@@ -1,7 +1,7 @@
 use crate::config::{self, Config};
 use crate::detect::ToolDetector;
 use crate::sync::SyncManager;
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
@@ -48,7 +48,13 @@ fn init_config() -> Result<()> {
     }
 
     let default_config = Config::default();
-    config::save_config(&default_config)?;
+    config::save_config(&default_config).map_err(|e| {
+        anyhow!(
+            "Failed to save configuration to {}: {}",
+            config_path.display(),
+            e
+        )
+    })?;
 
     println!("Configuration created at: {}", config_path.display());
     println!("You can now edit the file to customize your settings.");
@@ -155,7 +161,8 @@ fn show_status() -> Result<()> {
 
     println!("Source directory: {}", config.source.directory.display());
 
-    let skills = std::fs::read_dir(&config.source.directory)?;
+    let skills = std::fs::read_dir(&config.source.directory)
+        .map_err(|e| anyhow!("Failed to read source directory: {}", e))?;
     let skill_count = skills.count();
     println!("Skills found: {}", skill_count);
 

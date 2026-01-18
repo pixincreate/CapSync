@@ -1,20 +1,31 @@
+//! Configuration management for CapSync
+//!
+//! This module provides:
+//! - Configuration file loading and saving
+//! - Default configuration generation
+//! - Configuration path resolution
+
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-#[derive(Debug, Deserialize, Serialize)]
+/// Main configuration for CapSync
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Config {
+    /// Source skills directory configuration
     pub source: SourceConfig,
+    /// Tool-specific configurations
     pub tools: ToolsConfig,
+    /// Global sync settings
     pub sync: SyncConfig,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct SourceConfig {
     pub directory: PathBuf,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ToolsConfig {
     pub opencode: ToolConfig,
     pub claude: ToolConfig,
@@ -24,13 +35,13 @@ pub struct ToolsConfig {
     pub antigravity: ToolConfig,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ToolConfig {
     pub enabled: bool,
     pub path: PathBuf,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct SyncConfig {
     pub auto_detect: bool,
     pub create_dirs: bool,

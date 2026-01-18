@@ -1,5 +1,13 @@
+//! Synchronization engine for CapSync
+//!
+//! This module provides:
+//! - Skill directory scanning
+//! - Symlink creation and management
+//! - Cleanup of obsolete symlinks
+//! - Sync result reporting
+
 use crate::config::{Config, ToolConfig};
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -126,14 +134,21 @@ impl SyncManager {
             return Ok(());
         }
 
-        for entry in fs::read_dir(dest_dir)? {
+        for entry in fs::read_dir(dest_dir).with_context(|| {
+            format!(
+                "Failed to read destination directory: {}",
+                dest_dir.display()
+            )
+        })? {
             let entry = entry?;
             let path = entry.path();
 
             if path.is_symlink() {
                 if let Some(skill_name) = path.file_name().and_then(|n| n.to_str()) {
                     if !current_skills.contains(&skill_name.to_string()) {
-                        fs::remove_file(&path)?;
+                        fs::remove_file(&path).with_context(|| {
+                            format!("Failed to remove old symlink: {}", path.display())
+                        })?;
                         result.add_message(format!("Removed old symlink: {}", skill_name));
                     }
                 }
@@ -151,12 +166,24 @@ impl SyncManager {
 
         #[cfg(unix)]
         {
-            std::os::unix::fs::symlink(source, dest)?;
+            std::os::unix::fs::symlink(source, dest).with_context(|| {
+                format!(
+                    "Failed to create symlink from {} to {}",
+                    source.display(),
+                    dest.display()
+                )
+            })?;
         }
 
         #[cfg(windows)]
         {
-            std::os::windows::fs::symlink_dir(source, dest)?;
+            std::os::windows::fs::symlink_dir(source, dest).with_context(|| {
+                format!(
+                    "Failed to create symlink from {} to {}",
+                    source.display(),
+                    dest.display()
+                )
+            })?;
         }
 
         Ok(())
@@ -166,6 +193,12 @@ impl SyncManager {
 #[derive(Debug)]
 pub struct SyncResult {
     pub tools: Vec<(String, ToolSyncResult)>,
+}
+
+impl Default for SyncResult {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl SyncResult {
@@ -188,11 +221,16 @@ impl SyncResult {
     }
 }
 
+/// Result of syncing skills to a single tool
 #[derive(Debug)]
 pub struct ToolSyncResult {
+    /// Destination path for this tool
     pub path: PathBuf,
+    /// Skills successfully synced
     pub successful: Vec<String>,
+    /// Skills that failed to sync with error messages
     pub errors: Vec<(String, String)>,
+    /// Informational messages (created directories, cleaned up symlinks, etc.)
     pub messages: Vec<String>,
 }
 
