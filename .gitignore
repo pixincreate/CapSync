@@ -1,1 +1,6 @@
+# rust specifics
 /target
+
+# macOS specifics
+.DS_Store
+*.DS_Store
