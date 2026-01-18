@@ -117,7 +117,7 @@ fn detect_tools() -> Result<()> {
         println!("No supported agentic tools detected.");
     } else {
         for tool in &detected {
-            println!("✓ {}", tool);
+            println!("{}", tool);
         }
     }
 
@@ -147,88 +147,42 @@ fn show_status() -> Result<()> {
 
     if !config.source.directory.exists() {
         println!(
-            "❌ Source directory does not exist: {}",
+            "Source directory does not exist: {}",
             config.source.directory.display()
         );
         return Ok(());
     }
 
-    println!("✅ Source directory: {}", config.source.directory.display());
+    println!("Source directory: {}", config.source.directory.display());
 
     let skills = std::fs::read_dir(&config.source.directory)?;
     let skill_count = skills.count();
-    println!("📁 Skills found: {}", skill_count);
+    println!("Skills found: {}", skill_count);
 
     println!("\nEnabled Tools:");
 
     if config.tools.opencode.enabled {
-        let status = if config.tools.opencode.path.exists() {
-            "✅"
-        } else {
-            "❌"
-        };
-        println!(
-            "  {} opencode: {}",
-            status,
-            config.tools.opencode.path.display()
-        );
+        println!("  opencode: {}", config.tools.opencode.path.display());
     }
 
     if config.tools.claude.enabled {
-        let status = if config.tools.claude.path.exists() {
-            "✅"
-        } else {
-            "❌"
-        };
-        println!(
-            "  {} claude: {}",
-            status,
-            config.tools.claude.path.display()
-        );
+        println!("  claude: {}", config.tools.claude.path.display());
     }
 
     if config.tools.codex.enabled {
-        let status = if config.tools.codex.path.exists() {
-            "✅"
-        } else {
-            "❌"
-        };
-        println!("  {} codex: {}", status, config.tools.codex.path.display());
+        println!("  codex: {}", config.tools.codex.path.display());
     }
 
     if config.tools.cursor.enabled {
-        let status = if config.tools.cursor.path.exists() {
-            "✅"
-        } else {
-            "❌"
-        };
-        println!(
-            "  {} cursor: {}",
-            status,
-            config.tools.cursor.path.display()
-        );
+        println!("  cursor: {}", config.tools.cursor.path.display());
     }
 
     if config.tools.amp.enabled {
-        let status = if config.tools.amp.path.exists() {
-            "✅"
-        } else {
-            "❌"
-        };
-        println!("  {} amp: {}", status, config.tools.amp.path.display());
+        println!("  amp: {}", config.tools.amp.path.display());
     }
 
     if config.tools.antigravity.enabled {
-        let status = if config.tools.antigravity.path.exists() {
-            "✅"
-        } else {
-            "❌"
-        };
-        println!(
-            "  {} antigravity: {}",
-            status,
-            config.tools.antigravity.path.display()
-        );
+        println!("  antigravity: {}", config.tools.antigravity.path.display());
     }
 
     Ok(())
