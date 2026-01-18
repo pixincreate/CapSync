@@ -1,0 +1,78 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+env:
+  PROJECT_NAME: "cap_sync"
+
+jobs:
+  build-and-release:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            asset_name: linux
+            arch: x86_64
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            asset_name: darwin
+            arch: x86_64
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            asset_name: darwin
+            arch: aarch64
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install cross-compilation tools
+        if: matrix.target == 'aarch64-apple-darwin'
+        run: |
+          rustup target add aarch64-apple-darwin
+
+      - name: Build Binary
+        run: |
+          cargo build --release --target ${{ matrix.target }}
+
+      - name: Prepare Asset
+        shell: bash
+        run: |
+          mkdir -p release
+          BINARY_NAME="${{ env.PROJECT_NAME }}"
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            BINARY_NAME="${BINARY_NAME}.exe"
+          fi
+          cp "target/${{ matrix.target }}/release/${BINARY_NAME}" "release/${{ env.PROJECT_NAME }}-${{ matrix.asset_name }}-${{ matrix.arch }}"
+
+      - name: Generate SHA-256
+        run: |
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            certutil -hashfile "release/${{ env.PROJECT_NAME }}-${{ matrix.asset_name }}-${{ matrix.arch }}" SHA256 | grep -v "hash" > "release/${{ env.PROJECT_NAME }}-${{ matrix.asset_name }}-${{ matrix.arch }}.sha256"
+          else
+            shasum -a 256 "release/${{ env.PROJECT_NAME }}-${{ matrix.asset_name }}-${{ matrix.arch }}" > "release/${{ env.PROJECT_NAME }}-${{ matrix.asset_name }}-${{ matrix.arch }}.sha256"
+          fi
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: "CapSync ${{ github.ref_name }}"
+          files: |
+            release/${{ env.PROJECT_NAME }}-${{ matrix.asset_name }}-${{ matrix.arch }}
+            release/${{ env.PROJECT_NAME }}-${{ matrix.asset_name }}-${{ matrix.arch }}.sha256
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
