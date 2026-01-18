@@ -6,14 +6,14 @@ A simple tool to sync your AI coding skills across different tools.
 
 Different AI coding tools store skills in different folders:
 
-| Tool | Skills Folder |
-|-------|---------------|
-| OpenCode | `~/.config/opencode/skill/` |
-| ClaudeCode | `~/.claude/skills/` |
-| Cursor | `~/.cursor/skills/` |
-| Codex | `~/.codex/skills/` |
-| Amp | `~/.agents/skills/` |
-| Antigravity | `~/.agent/skills/` |
+| Tool        | Skills Folder               |
+| ----------- | --------------------------- |
+| OpenCode    | `~/.config/opencode/skill/` |
+| ClaudeCode  | `~/.claude/skills/`         |
+| Cursor      | `~/.cursor/skills/`         |
+| Codex       | `~/.codex/skills/`          |
+| Amp         | `~/.agents/skills/`         |
+| Antigravity | `~/.agent/skills/`          |
 
 Managing the same skills in all these places is annoying.
 
@@ -63,18 +63,23 @@ capsync status
 ## Commands
 
 ### `capsync init`
+
 Creates the config file with sensible defaults.
 
 ### `capsync config`
+
 Shows your current settings.
 
 ### `capsync detect-tools`
+
 Checks which AI coding tools are installed.
 
 ### `capsync sync`
+
 Copies your skills to all enabled tools using symlinks.
 
 ### `capsync status`
+
 Shows what's currently synced.
 
 ## Configuration
@@ -93,6 +98,7 @@ cursor = { enabled = false, path = "~/.cursor/skills" }
 ```
 
 Change:
+
 - `directory`: Where your skills are stored
 - `enabled`: Turn tools on/off
 - `path`: Where each tool keeps its skills
@@ -129,7 +135,7 @@ Details about your skill...
 ## Supported Tools
 
 - OpenCode
-- ClaudeCode  
+- ClaudeCode
 - Cursor
 - Codex
 - Amp
@@ -157,4 +163,4 @@ cargo run -- sync
 
 ## License
 
-MIT
+CC0 1.0 Universal

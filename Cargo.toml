@@ -2,6 +2,8 @@
 name = "cap_sync"
 version = "1.1.0"
 edition = "2021"
+author = "pa1nark"
+description = "A simple tool to sync your AI coding skills across different tools."
 
 [dependencies]
 clap = { version = "4.0", features = ["derive"] }
