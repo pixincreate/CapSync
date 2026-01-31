@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- Created detailed technical documentation in `documentation/detailed-working.md`
+- Documentation covers design, approach, features, and working with conversational tone
+
 ### Changed
 - Rewrote README with clearer explanations and better structure
 - Added "Important Notice" section explaining what CapSync is and is not
