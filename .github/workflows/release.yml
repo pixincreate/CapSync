@@ -8,7 +8,7 @@ permissions:
   contents: write
 
 env:
-  PROJECT_NAME: "cap_sync"
+  PROJECT_NAME: "capsync"
 
 jobs:
   build-and-release:

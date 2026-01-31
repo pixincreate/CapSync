@@ -29,7 +29,7 @@ Download a pre-built binary and use it directly:
 
 **macOS (Apple Silicon):**
 ```bash
-curl -L -o capsync https://github.com/pixincreate/cap_sync/releases/latest/download/cap_sync-darwin-aarch64
+curl -L -o capsync https://github.com/pixincreate/cap_sync/releases/latest/download/capsync-darwin-aarch64
 chmod +x capsync
 # Move to a directory in your PATH, or use directly:
 ./capsync init
@@ -37,14 +37,14 @@ chmod +x capsync
 
 **macOS (Intel):**
 ```bash
-curl -L -o capsync https://github.com/pixincreate/cap_sync/releases/latest/download/cap_sync-darwin-x86_64
+curl -L -o capsync https://github.com/pixincreate/cap_sync/releases/latest/download/capsync-darwin-x86_64
 chmod +x capsync
 ./capsync init
 ```
 
 **Linux:**
 ```bash
-curl -L -o capsync https://github.com/pixincreate/cap_sync/releases/latest/download/cap_sync-linux-x86_64
+curl -L -o capsync https://github.com/pixincreate/cap_sync/releases/latest/download/capsync-linux-x86_64
 chmod +x capsync
 ./capsync init
 ```
