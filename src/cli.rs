@@ -1,7 +1,7 @@
 use crate::config::{self, Config};
 use crate::detect::ToolDetector;
 use crate::sync::SyncManager;
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
@@ -22,7 +22,15 @@ pub enum Commands {
     DetectTools,
     /// Sync skills to all enabled tools
     Sync,
-    /// Show sync status
+    /// Remove symlink from a tool (use --all to remove all)
+    Remove {
+        /// Tool name to remove symlink from (optional if --all is used)
+        tool: Option<String>,
+        /// Remove from all destinations
+        #[arg(long)]
+        all: bool,
+    },
+    /// Check symlink status
     Status,
 }
 
@@ -34,6 +42,15 @@ pub fn run() -> Result<()> {
         Commands::Config => show_config(),
         Commands::DetectTools => detect_tools(),
         Commands::Sync => sync_skills(),
+        Commands::Remove { tool, all } => {
+            if all {
+                remove_all()
+            } else if let Some(tool_name) = tool {
+                remove_tool(&tool_name)
+            } else {
+                Err(anyhow!("Either provide a tool name or use --all flag"))
+            }
+        }
         Commands::Status => show_status(),
     }
 }
@@ -70,45 +87,18 @@ fn show_config() -> Result<()> {
     println!("Current Configuration:");
     println!("=====================");
     println!("Config file: {}", config_path.display());
-    println!("Source Directory: {}", config.source.directory.display());
+    println!("Source: {}", config.source.display());
     println!();
 
-    println!("Tools:");
-    println!(
-        "  opencode: enabled={}, path={}",
-        config.tools.opencode.enabled,
-        config.tools.opencode.path.display()
-    );
-    println!(
-        "  claude: enabled={}, path={}",
-        config.tools.claude.enabled,
-        config.tools.claude.path.display()
-    );
-    println!(
-        "  codex: enabled={}, path={}",
-        config.tools.codex.enabled,
-        config.tools.codex.path.display()
-    );
-    println!(
-        "  cursor: enabled={}, path={}",
-        config.tools.cursor.enabled,
-        config.tools.cursor.path.display()
-    );
-    println!(
-        "  amp: enabled={}, path={}",
-        config.tools.amp.enabled,
-        config.tools.amp.path.display()
-    );
-    println!(
-        "  antigravity: enabled={}, path={}",
-        config.tools.antigravity.enabled,
-        config.tools.antigravity.path.display()
-    );
-    println!();
-
-    println!("Sync Settings:");
-    println!("  auto_detect: {}", config.sync.auto_detect);
-    println!("  create_dirs: {}", config.sync.create_dirs);
+    println!("Destinations:");
+    for (name, dest) in &config.destinations {
+        println!(
+            "  {}: enabled={}, path={}",
+            name,
+            dest.enabled,
+            dest.path.display()
+        );
+    }
 
     Ok(())
 }
@@ -138,58 +128,70 @@ fn sync_skills() -> Result<()> {
 
     println!("Syncing skills...");
     println!("================");
+    println!("Source: {}", config.source.display());
 
     let result = SyncManager::sync_all(&config)?;
-    result.print_summary();
+    result.print();
 
     Ok(())
+}
+
+fn remove_tool(tool: &str) -> Result<()> {
+    let config = config::load_config()?;
+    SyncManager::remove(tool, &config)
+}
+
+fn remove_all() -> Result<()> {
+    let config = config::load_config()?;
+    println!("Removing all symlinks...");
+    SyncManager::remove_all(&config)
 }
 
 fn show_status() -> Result<()> {
     let config = config::load_config()?;
 
-    println!("Sync Status:");
-    println!("============");
+    println!("Status:");
+    println!("=======");
 
-    if !config.source.directory.exists() {
-        println!(
-            "Source directory does not exist: {}",
-            config.source.directory.display()
-        );
-        return Ok(());
+    // Check source
+    if config.source.exists() {
+        println!("Source: {} ✓", config.source.display());
+    } else {
+        println!("Source: {} ✗ (does not exist)", config.source.display());
     }
 
-    println!("Source directory: {}", config.source.directory.display());
-
-    let skills = std::fs::read_dir(&config.source.directory)
-        .map_err(|e| anyhow!("Failed to read source directory: {}", e))?;
-    let skill_count = skills.count();
-    println!("Skills found: {}", skill_count);
-
-    println!("\nEnabled Tools:");
-
-    if config.tools.opencode.enabled {
-        println!("  opencode: {}", config.tools.opencode.path.display());
-    }
-
-    if config.tools.claude.enabled {
-        println!("  claude: {}", config.tools.claude.path.display());
-    }
-
-    if config.tools.codex.enabled {
-        println!("  codex: {}", config.tools.codex.path.display());
-    }
-
-    if config.tools.cursor.enabled {
-        println!("  cursor: {}", config.tools.cursor.path.display());
-    }
-
-    if config.tools.amp.enabled {
-        println!("  amp: {}", config.tools.amp.path.display());
-    }
-
-    if config.tools.antigravity.enabled {
-        println!("  antigravity: {}", config.tools.antigravity.path.display());
+    println!("\nDestinations:");
+    for (name, dest) in &config.destinations {
+        let path = &dest.path;
+        if path.is_symlink() {
+            // Check if symlink is broken
+            match path.read_link() {
+                Ok(target) => {
+                    if target.exists() {
+                        println!(
+                            "  {}: {} ✓ (symlink -> {})",
+                            name,
+                            path.display(),
+                            target.display()
+                        );
+                    } else {
+                        println!(
+                            "  {}: {} ⚠ (broken symlink -> {})",
+                            name,
+                            path.display(),
+                            target.display()
+                        );
+                    }
+                }
+                Err(_) => {
+                    println!("  {}: {} ✗ (cannot read symlink)", name, path.display());
+                }
+            }
+        } else if path.exists() {
+            println!("  {}: {} ⚠ (exists, not a symlink)", name, path.display());
+        } else {
+            println!("  {}: {} - (not synced)", name, path.display());
+        }
     }
 
     Ok(())

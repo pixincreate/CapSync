@@ -1,19 +1,14 @@
-use cap_sync::config::{get_config_path, Config};
+use capsync::config::{Config, get_config_path};
 use std::fs;
 use tempfile::TempDir;
 
 #[test]
 fn test_config_default() {
     let config = Config::default();
-    assert!(config
-        .source
-        .directory
-        .ends_with("Dev/scripts/skills/skills"));
-    assert!(config.tools.opencode.enabled);
-    assert!(config.tools.claude.enabled);
-    assert!(!config.tools.codex.enabled);
-    assert!(config.sync.auto_detect);
-    assert!(config.sync.create_dirs);
+    assert!(config.source.ends_with("Dev/scripts/skills/skills"));
+    assert!(config.destinations.get("opencode").unwrap().enabled);
+    assert!(config.destinations.get("claude").unwrap().enabled);
+    assert!(!config.destinations.get("codex").unwrap().enabled);
 }
 
 #[test]
@@ -28,15 +23,14 @@ fn test_config_save_and_load() {
     let loaded_content = fs::read_to_string(&config_path).unwrap();
     let loaded_config: Config = toml::from_str(&loaded_content).unwrap();
 
-    assert_eq!(
-        config.tools.opencode.path,
-        loaded_config.tools.opencode.path
-    );
-    assert_eq!(
-        config.tools.opencode.enabled,
-        loaded_config.tools.opencode.enabled
-    );
-    assert_eq!(config.tools.claude.path, loaded_config.tools.claude.path);
+    let opencode = config.destinations.get("opencode").unwrap();
+    let loaded_opencode = loaded_config.destinations.get("opencode").unwrap();
+    assert_eq!(opencode.path, loaded_opencode.path);
+    assert_eq!(opencode.enabled, loaded_opencode.enabled);
+
+    let claude = config.destinations.get("claude").unwrap();
+    let loaded_claude = loaded_config.destinations.get("claude").unwrap();
+    assert_eq!(claude.path, loaded_claude.path);
 }
 
 #[test]
@@ -48,7 +42,23 @@ fn test_get_config_path() {
 #[test]
 fn test_config_validation() {
     let config = Config::default();
-    assert!(!config.source.directory.as_os_str().is_empty());
-    assert!(!config.tools.opencode.path.as_os_str().is_empty());
-    assert!(!config.tools.claude.path.as_os_str().is_empty());
+    assert!(!config.source.as_os_str().is_empty());
+    assert!(
+        !config
+            .destinations
+            .get("opencode")
+            .unwrap()
+            .path
+            .as_os_str()
+            .is_empty()
+    );
+    assert!(
+        !config
+            .destinations
+            .get("claude")
+            .unwrap()
+            .path
+            .as_os_str()
+            .is_empty()
+    );
 }

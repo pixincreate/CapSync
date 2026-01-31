@@ -1,90 +1,71 @@
-//! Configuration management for CapSync
-//!
-//! This module provides:
-//! - Configuration file loading and saving
-//! - Default configuration generation
-//! - Configuration path resolution
-
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::path::PathBuf;
 
-/// Main configuration for CapSync
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Config {
-    /// Source skills directory configuration
-    pub source: SourceConfig,
-    /// Tool-specific configurations
-    pub tools: ToolsConfig,
-    /// Global sync settings
-    pub sync: SyncConfig,
+    pub source: PathBuf,
+    pub destinations: HashMap<String, DestinationConfig>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct SourceConfig {
-    pub directory: PathBuf,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct ToolsConfig {
-    pub opencode: ToolConfig,
-    pub claude: ToolConfig,
-    pub codex: ToolConfig,
-    pub cursor: ToolConfig,
-    pub amp: ToolConfig,
-    pub antigravity: ToolConfig,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct ToolConfig {
+pub struct DestinationConfig {
     pub enabled: bool,
     pub path: PathBuf,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct SyncConfig {
-    pub auto_detect: bool,
-    pub create_dirs: bool,
 }
 
 impl Default for Config {
     fn default() -> Self {
         let home = dirs::home_dir().unwrap_or_else(|| PathBuf::from("~"));
+        let mut destinations = HashMap::new();
+
+        destinations.insert(
+            "opencode".to_string(),
+            DestinationConfig {
+                enabled: true,
+                path: home.join(".config/opencode/skill"),
+            },
+        );
+        destinations.insert(
+            "claude".to_string(),
+            DestinationConfig {
+                enabled: true,
+                path: home.join(".claude/skills"),
+            },
+        );
+        destinations.insert(
+            "codex".to_string(),
+            DestinationConfig {
+                enabled: false,
+                path: home.join(".codex/skills"),
+            },
+        );
+        destinations.insert(
+            "cursor".to_string(),
+            DestinationConfig {
+                enabled: false,
+                path: home.join(".cursor/skills"),
+            },
+        );
+        destinations.insert(
+            "amp".to_string(),
+            DestinationConfig {
+                enabled: false,
+                path: home.join(".agents/skills"),
+            },
+        );
+        destinations.insert(
+            "antigravity".to_string(),
+            DestinationConfig {
+                enabled: false,
+                path: home.join(".agent/skills"),
+            },
+        );
 
         Self {
-            source: SourceConfig {
-                directory: home.join("Dev/scripts/skills/skills"),
-            },
-            tools: ToolsConfig {
-                opencode: ToolConfig {
-                    enabled: true,
-                    path: home.join(".config/opencode/skill"),
-                },
-                claude: ToolConfig {
-                    enabled: true,
-                    path: home.join(".claude/skills"),
-                },
-                codex: ToolConfig {
-                    enabled: false,
-                    path: home.join(".codex/skills"),
-                },
-                cursor: ToolConfig {
-                    enabled: false,
-                    path: home.join(".cursor/skills"),
-                },
-                amp: ToolConfig {
-                    enabled: false,
-                    path: home.join(".agents/skills"),
-                },
-                antigravity: ToolConfig {
-                    enabled: false,
-                    path: home.join(".agent/skills"),
-                },
-            },
-            sync: SyncConfig {
-                auto_detect: true,
-                create_dirs: true,
-            },
+            source: home.join("Dev/scripts/skills/skills"),
+            destinations,
         }
     }
 }

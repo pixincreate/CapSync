@@ -1,9 +1,19 @@
 [package]
-name = "cap_sync"
-version = "1.1.0"
-edition = "2021"
-author = "pa1nark"
+name = "capsync"
+version = "1.2.0"
+edition = "2024"
+authors = ["pa1nark"]
 description = "A simple tool to sync your AI coding skills across different tools."
+license = "CC0-1.0"
+repository = "https://github.com/pixincreate/cap_sync"
+homepage = "https://github.com/pixincreate/cap_sync"
+keywords = ["ai", "skills", "sync", "opencode", "claude", "cursor", "codex"]
+categories = ["command-line-utilities", "development-tools"]
+rust-version = "1.85"
+
+[[bin]]
+name = "capsync"
+path = "src/main.rs"
 
 [dependencies]
 clap = { version = "4.0", features = ["derive"] }
