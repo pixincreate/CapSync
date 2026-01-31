@@ -4,18 +4,24 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-## [1.3.0] - 2026-01-31
+## [1.3.5] - 2026-01-31
 
 ### Added
 - `capsync add <tool>` command to add tools to configuration
 - Tool validation - shows error if tool doesn't exist or is unsupported
 - `--no-sync` flag for `add` command to skip syncing after adding
-- Support for 40+ AI tools (expanded from 6)
-- Shell variable expansion ($HOME, ~) in paths
+- Tests for tools module (6 new tests)
 
 ### Changed
 - `init` command now only adds detected tools to config (not all 40+)
 - Config output now only shows enabled tools (cleaner display)
+- Updated README with comprehensive documentation
+
+## [1.3.0] - 2026-01-31
+
+### Added
+- Support for 40+ AI tools (expanded from 6)
+- Shell variable expansion ($HOME, ~) in paths
 - Interactive init - requires user to enter source path (no default)
 - Single source of truth for all tool definitions in `tools.rs`
 
