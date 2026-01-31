@@ -59,3 +59,7 @@ pub fn all_tools() -> Vec<Tool> {
         Tool::new("zencoder", ".zencoder", ".zencoder/skills"),
     ]
 }
+
+pub fn get_tool(name: &str) -> Option<Tool> {
+    all_tools().into_iter().find(|t| t.name == name)
+}

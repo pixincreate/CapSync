@@ -1,7 +1,7 @@
 use crate::config::{self, Config, DestinationConfig};
 use crate::detect::ToolDetector;
 use crate::sync::SyncManager;
-use crate::tools::all_tools;
+use crate::tools::{all_tools, get_tool};
 use anyhow::{Result, anyhow};
 use clap::{Parser, Subcommand};
 use std::collections::HashMap;
@@ -26,6 +26,14 @@ pub enum Commands {
     DetectTools,
     /// Sync skills to all enabled tools
     Sync,
+    /// Add a tool to configuration and sync
+    Add {
+        /// Tool name to add
+        tool: String,
+        /// Skip syncing after adding
+        #[arg(long)]
+        no_sync: bool,
+    },
     /// Remove symlink from a tool (use --all to remove all)
     Remove {
         /// Tool name to remove symlink from (optional if --all is used)
@@ -46,6 +54,7 @@ pub fn run() -> Result<()> {
         Commands::Config => show_config(),
         Commands::DetectTools => detect_tools(),
         Commands::Sync => sync_skills(),
+        Commands::Add { tool, no_sync } => add_tool(&tool, no_sync),
         Commands::Remove { tool, all } => {
             if all {
                 remove_all()
@@ -201,6 +210,47 @@ fn remove_all() -> Result<()> {
     let config = config::load_config()?;
     println!("Removing all symlinks...");
     SyncManager::remove_all(&config)
+}
+
+fn add_tool(tool_name: &str, no_sync: bool) -> Result<()> {
+    let mut config = config::load_config()?;
+
+    // Validate tool exists
+    let tool = get_tool(tool_name).ok_or_else(|| {
+        anyhow!(
+            "Tool '{}' does not exist or is unsupported in the current version",
+            tool_name
+        )
+    })?;
+
+    // Check if already in config
+    if config.destinations.contains_key(tool_name) {
+        println!("Tool '{}' is already in the configuration", tool_name);
+        if !no_sync {
+            println!("Running sync...");
+            return sync_skills();
+        }
+        return Ok(());
+    }
+
+    // Add tool to config
+    config.destinations.insert(
+        tool_name.to_string(),
+        DestinationConfig {
+            enabled: true,
+            path: tool.skills_path,
+        },
+    );
+
+    config::save_config(&config)?;
+    println!("Added '{}' to configuration", tool_name);
+
+    if !no_sync {
+        println!("Running sync...");
+        sync_skills()
+    } else {
+        Ok(())
+    }
 }
 
 fn show_status() -> Result<()> {
