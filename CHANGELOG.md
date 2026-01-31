@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+- Rewrote README with clearer explanations and better structure
+- Added "Important Notice" section explaining what CapSync is and is not
+- Simplified license section while maintaining accuracy
+
 ## [1.3.5] - 2026-01-31
 
 ### Added
@@ -15,7 +20,6 @@ All notable changes to this project will be documented in this file.
 ### Changed
 - `init` command now only adds detected tools to config (not all 40+)
 - Config output now only shows enabled tools (cleaner display)
-- Updated README with comprehensive documentation
 
 ## [1.3.0] - 2026-01-31
 
