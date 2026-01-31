@@ -1,4 +1,4 @@
-use crate::tools::{all_tools, default_source_path};
+use crate::tools::all_tools;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -32,7 +32,7 @@ impl Default for Config {
         }
 
         Self {
-            source: default_source_path(),
+            source: PathBuf::new(), // No default - user must provide
             destinations,
         }
     }

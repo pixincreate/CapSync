@@ -5,7 +5,8 @@ use tempfile::TempDir;
 #[test]
 fn test_config_default() {
     let config = Config::default();
-    assert!(config.source.ends_with("Dev/scripts/skills/skills"));
+    // Source is empty by default - user must provide their own path
+    assert!(config.source.as_os_str().is_empty());
     // All tools are disabled by default - user enables what they want
     assert!(!config.destinations.get("opencode").unwrap().enabled);
     assert!(!config.destinations.get("claude").unwrap().enabled);
@@ -45,7 +46,9 @@ fn test_get_config_path() {
 #[test]
 fn test_config_validation() {
     let config = Config::default();
-    assert!(!config.source.as_os_str().is_empty());
+    // Source is empty by default (user must provide)
+    assert!(config.source.as_os_str().is_empty());
+    // But destination paths should be set
     assert!(
         !config
             .destinations
