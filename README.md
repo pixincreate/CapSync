@@ -23,23 +23,50 @@ Keep your skills in one place and let CapSync sync them everywhere.
 
 ## Installation
 
-### Download Binary (Easy)
+### Option 1: Download Binary (Quickest)
 
-1. Go to [Releases](https://github.com/yourusername/cap_sync/releases)
-2. Download for your system:
-   - `cap_sync-linux-x86_64` for Linux
-   - `cap_sync-darwin-x86_64` for Mac Intel
-   - `cap_sync-darwin-aarch64` for Mac Apple Silicon
-3. Make it executable:
-   ```bash
-   chmod +x cap_sync-*
-   sudo mv cap_sync-* /usr/local/bin/capsync
-   ```
+Download a pre-built binary and use it directly:
 
-### Build From Source
+**macOS (Apple Silicon):**
+```bash
+curl -L -o capsync https://github.com/pixincreate/cap_sync/releases/latest/download/cap_sync-darwin-aarch64
+chmod +x capsync
+# Move to a directory in your PATH, or use directly:
+./capsync init
+```
+
+**macOS (Intel):**
+```bash
+curl -L -o capsync https://github.com/pixincreate/cap_sync/releases/latest/download/cap_sync-darwin-x86_64
+chmod +x capsync
+./capsync init
+```
+
+**Linux:**
+```bash
+curl -L -o capsync https://github.com/pixincreate/cap_sync/releases/latest/download/cap_sync-linux-x86_64
+chmod +x capsync
+./capsync init
+```
+
+**Add to your shell (optional):**
+```bash
+# Add to ~/.zshrc or ~/.bashrc
+export PATH="$PATH:/path/to/capsync/dir"
+```
+
+### Option 2: Install via cargo
+
+If you have Rust installed:
 
 ```bash
-git clone https://github.com/pixincreate/CapSync.git
+cargo install capsync
+```
+
+### Option 3: Build from Source
+
+```bash
+git clone https://github.com/pixincreate/cap_sync.git
 cd cap_sync
 cargo install --path .
 ```
@@ -58,13 +85,19 @@ capsync sync
 
 # Check what's synced
 capsync status
+
+# Remove from a specific tool
+capsync remove claude
+
+# Remove from all tools
+capsync remove --all
 ```
 
 ## Commands
 
 ### `capsync init`
 
-Creates the config file with sensible defaults.
+Creates the config file with sensible defaults at `~/.config/capsync/config.toml`.
 
 ### `capsync config`
 
@@ -72,42 +105,57 @@ Shows your current settings.
 
 ### `capsync detect-tools`
 
-Checks which AI coding tools are installed.
+Checks which AI coding tools are installed on your system.
 
 ### `capsync sync`
 
-Copies your skills to all enabled tools using symlinks.
+Creates symlinks from your source directory to all enabled tool destinations.
 
 ### `capsync status`
 
-Shows what's currently synced.
+Shows the current sync status:
+- Whether source directory exists
+- Which destinations have symlinks
+- Whether symlinks are valid or broken
+
+### `capsync remove <tool>`
+
+Removes the symlink from a specific tool's directory.
+
+Example: `capsync remove codex`
+
+### `capsync remove --all`
+
+Removes symlinks from all destinations.
 
 ## Configuration
 
 Config file is at `~/.config/capsync/config.toml`:
 
 ```toml
-[source]
-directory = "~/Dev/scripts/skills/skills"
+source = "~/Dev/scripts/skills/skills"
 
-[tools]
+[destinations]
 opencode = { enabled = true, path = "~/.config/opencode/skill" }
 claude = { enabled = true, path = "~/.claude/skills" }
 codex = { enabled = false, path = "~/.codex/skills" }
 cursor = { enabled = false, path = "~/.cursor/skills" }
+amp = { enabled = false, path = "~/.agents/skills" }
+antigravity = { enabled = false, path = "~/.agent/skills" }
 ```
 
 Change:
 
-- `directory`: Where your skills are stored
+- `source`: Where your skills are stored
 - `enabled`: Turn tools on/off
 - `path`: Where each tool keeps its skills
 
 ## How It Works
 
 1. You put skills in one folder
-2. CapSync creates symlinks from that folder to each tool's skills folder
-3. Update your skills in one place, they're available everywhere
+2. CapSync creates a **directory symlink** from that folder to each tool's skills folder
+3. Any files you add/remove in the source are automatically available in all destinations
+4. No need to re-run sync when you add new skills
 
 ## Skill Format
 
