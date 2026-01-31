@@ -6,9 +6,12 @@ use tempfile::TempDir;
 fn test_config_default() {
     let config = Config::default();
     assert!(config.source.ends_with("Dev/scripts/skills/skills"));
-    assert!(config.destinations.get("opencode").unwrap().enabled);
-    assert!(config.destinations.get("claude").unwrap().enabled);
+    // All tools are disabled by default - user enables what they want
+    assert!(!config.destinations.get("opencode").unwrap().enabled);
+    assert!(!config.destinations.get("claude").unwrap().enabled);
     assert!(!config.destinations.get("codex").unwrap().enabled);
+    // Verify we have many tools defined
+    assert!(config.destinations.len() > 10);
 }
 
 #[test]

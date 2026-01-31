@@ -1,3 +1,4 @@
+use crate::tools::{all_tools, default_source_path};
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -17,54 +18,21 @@ pub struct DestinationConfig {
 
 impl Default for Config {
     fn default() -> Self {
-        let home = dirs::home_dir().unwrap_or_else(|| PathBuf::from("~"));
         let mut destinations = HashMap::new();
 
-        destinations.insert(
-            "opencode".to_string(),
-            DestinationConfig {
-                enabled: true,
-                path: home.join(".config/opencode/skill"),
-            },
-        );
-        destinations.insert(
-            "claude".to_string(),
-            DestinationConfig {
-                enabled: true,
-                path: home.join(".claude/skills"),
-            },
-        );
-        destinations.insert(
-            "codex".to_string(),
-            DestinationConfig {
-                enabled: false,
-                path: home.join(".codex/skills"),
-            },
-        );
-        destinations.insert(
-            "cursor".to_string(),
-            DestinationConfig {
-                enabled: false,
-                path: home.join(".cursor/skills"),
-            },
-        );
-        destinations.insert(
-            "amp".to_string(),
-            DestinationConfig {
-                enabled: false,
-                path: home.join(".agents/skills"),
-            },
-        );
-        destinations.insert(
-            "antigravity".to_string(),
-            DestinationConfig {
-                enabled: false,
-                path: home.join(".agent/skills"),
-            },
-        );
+        // Use tools module for all tool definitions
+        for tool in all_tools() {
+            destinations.insert(
+                tool.name.to_string(),
+                DestinationConfig {
+                    enabled: false, // Default to disabled, let user enable what they want
+                    path: tool.skills_path,
+                },
+            );
+        }
 
         Self {
-            source: home.join("Dev/scripts/skills/skills"),
+            source: default_source_path(),
             destinations,
         }
     }

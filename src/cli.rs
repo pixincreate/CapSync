@@ -1,6 +1,7 @@
 use crate::config::{self, Config, DestinationConfig};
 use crate::detect::ToolDetector;
 use crate::sync::SyncManager;
+use crate::tools::all_tools;
 use anyhow::{Result, anyhow};
 use clap::{Parser, Subcommand};
 use std::collections::HashMap;
@@ -87,25 +88,15 @@ fn init_config() -> Result<()> {
     let detected = ToolDetector::detect_all();
 
     let mut destinations = HashMap::new();
-    let home = dirs::home_dir().unwrap_or_else(|| PathBuf::from("~"));
 
-    // Define all possible tools and their default paths
-    let all_tools = [
-        ("opencode", home.join(".config/opencode/skill")),
-        ("claude", home.join(".claude/skills")),
-        ("codex", home.join(".codex/skills")),
-        ("cursor", home.join(".cursor/skills")),
-        ("amp", home.join(".agents/skills")),
-        ("antigravity", home.join(".agent/skills")),
-    ];
-
-    for (name, path) in all_tools {
-        let detected_enabled = detected.contains(&name.to_string());
+    // Use tools module for all tool definitions
+    for tool in all_tools() {
+        let detected_enabled = detected.contains(&tool.name.to_string());
         destinations.insert(
-            name.to_string(),
+            tool.name.to_string(),
             DestinationConfig {
                 enabled: detected_enabled,
-                path,
+                path: tool.skills_path,
             },
         );
     }
