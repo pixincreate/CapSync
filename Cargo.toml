@@ -7,7 +7,7 @@ description = "A simple tool to sync your AI coding skills across different tool
 license = "CC0-1.0"
 repository = "https://github.com/pixincreate/cap_sync"
 homepage = "https://github.com/pixincreate/cap_sync"
-keywords = ["ai", "skills", "sync", "opencode", "claude", "cursor", "codex"]
+keywords = ["ai", "skills", "sync", "capabilities"]
 categories = ["command-line-utilities", "development-tools"]
 rust-version = "1.85"
 
