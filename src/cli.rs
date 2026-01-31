@@ -78,7 +78,10 @@ fn init_config() -> Result<()> {
         io::stdin().read_line(&mut source_input)?;
         let trimmed = source_input.trim();
         if !trimmed.is_empty() {
-            break PathBuf::from(trimmed);
+            // Expand shell variables like $HOME and tilde
+            let expanded =
+                shellexpand::full(trimmed).map_err(|e| anyhow!("Failed to expand path: {}", e))?;
+            break PathBuf::from(expanded.as_ref());
         }
         println!("Please enter a path.");
     };
