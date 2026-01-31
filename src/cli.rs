@@ -89,20 +89,21 @@ fn init_config() -> Result<()> {
 
     let mut destinations = HashMap::new();
 
+    // Only add detected tools to config
     for tool in all_tools() {
-        let detected_enabled = detected.contains(&tool.name.to_string());
-        destinations.insert(
-            tool.name.to_string(),
-            DestinationConfig {
-                enabled: detected_enabled,
-                path: tool.skills_path,
-            },
-        );
+        if detected.contains(&tool.name.to_string()) {
+            destinations.insert(
+                tool.name.to_string(),
+                DestinationConfig {
+                    enabled: true,
+                    path: tool.skills_path,
+                },
+            );
+        }
     }
 
-    // Show what was detected
     if detected.is_empty() {
-        println!("No tools detected. You can enable them manually in the config.");
+        println!("No tools detected. You can manually add tools to the config later.");
     } else {
         println!("Detected and enabled: {}", detected.join(", "));
     }
@@ -140,14 +141,19 @@ fn show_config() -> Result<()> {
     println!("Source: {}", config.source.display());
     println!();
 
-    println!("Destinations:");
-    for (name, dest) in &config.destinations {
-        println!(
-            "  {}: enabled={}, path={}",
-            name,
-            dest.enabled,
-            dest.path.display()
-        );
+    let enabled: Vec<_> = config
+        .destinations
+        .iter()
+        .filter(|(_, dest)| dest.enabled)
+        .collect();
+
+    if enabled.is_empty() {
+        println!("No tools enabled.");
+    } else {
+        println!("Enabled tools:");
+        for (name, dest) in enabled {
+            println!("  {}: {}", name, dest.path.display());
+        }
     }
 
     Ok(())
