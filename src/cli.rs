@@ -69,21 +69,17 @@ fn init_config() -> Result<()> {
 
     println!("Welcome to CapSync! Let's set up your configuration.\n");
 
-    // Ask for source directory
-    let default_source = dirs::home_dir()
-        .unwrap_or_else(|| PathBuf::from("~"))
-        .join("Dev/scripts/skills/skills");
-    print!(
-        "Enter your skills directory [{}]: ",
-        default_source.display()
-    );
-    io::stdout().flush()?;
-    let mut source_input = String::new();
-    io::stdin().read_line(&mut source_input)?;
-    let source = if source_input.trim().is_empty() {
-        default_source
-    } else {
-        PathBuf::from(source_input.trim())
+    // Ask for source directory (required)
+    let source = loop {
+        print!("Enter your skills directory: ");
+        io::stdout().flush()?;
+        let mut source_input = String::new();
+        io::stdin().read_line(&mut source_input)?;
+        let trimmed = source_input.trim();
+        if !trimmed.is_empty() {
+            break PathBuf::from(trimmed);
+        }
+        println!("Please enter a path.");
     };
 
     // Auto-detect tools
