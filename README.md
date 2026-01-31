@@ -74,7 +74,7 @@ cargo install --path .
 ## Quick Start
 
 ```bash
-# Set up config
+# Set up config (only detected tools are added)
 capsync init
 
 # See which tools you have
@@ -85,6 +85,12 @@ capsync sync
 
 # Check what's synced
 capsync status
+
+# Add a new tool and sync automatically
+capsync add cursor
+
+# Add without syncing
+capsync add codex --no-sync
 
 # Remove from a specific tool
 capsync remove claude
@@ -97,11 +103,12 @@ capsync remove --all
 
 ### `capsync init`
 
-Creates the config file with sensible defaults at `~/.config/capsync/config.toml`.
+Creates the config file with detected tools at `~/.config/capsync/config.toml`.
+Only tools that are currently installed on your system are added.
 
 ### `capsync config`
 
-Shows your current settings.
+Shows your current settings and enabled tools.
 
 ### `capsync detect-tools`
 
@@ -110,6 +117,23 @@ Checks which AI coding tools are installed on your system.
 ### `capsync sync`
 
 Creates symlinks from your source directory to all enabled tool destinations.
+
+### `capsync add <tool>`
+
+Adds a tool to your configuration and automatically syncs.
+
+```bash
+# Add cursor and sync
+capsync add cursor
+
+# Add without syncing
+capsync add codex --no-sync
+```
+
+If the tool name is invalid or unsupported, you'll get an error:
+```
+Error: Tool 'invalid-tool' does not exist or is unsupported in the current version
+```
 
 ### `capsync status`
 
@@ -133,22 +157,18 @@ Removes symlinks from all destinations.
 Config file is at `~/.config/capsync/config.toml`:
 
 ```toml
-source = "~/Dev/scripts/skills/skills"
+source = "/Users/you/Dev/scripts/skills"
 
-[destinations]
-opencode = { enabled = true, path = "~/.config/opencode/skill" }
-claude = { enabled = true, path = "~/.claude/skills" }
-codex = { enabled = false, path = "~/.codex/skills" }
-cursor = { enabled = false, path = "~/.cursor/skills" }
-amp = { enabled = false, path = "~/.agents/skills" }
-antigravity = { enabled = false, path = "~/.agent/skills" }
+[destinations.opencode]
+enabled = true
+path = "/Users/you/.config/opencode/skill"
+
+[destinations.claude]
+enabled = true
+path = "/Users/you/.claude/skills"
 ```
 
-Change:
-
-- `source`: Where your skills are stored
-- `enabled`: Turn tools on/off
-- `path`: Where each tool keeps its skills
+Only detected tools are added to the config. You can manually add more tools using `capsync add <tool>`.
 
 ## How It Works
 
@@ -157,37 +177,23 @@ Change:
 3. Any files you add/remove in the source are automatically available in all destinations
 4. No need to re-run sync when you add new skills
 
-## Skill Format
-
-Each skill is a folder with a `SKILL.md` file:
-
-```
-my-skill/
-└── SKILL.md
-```
-
-The `SKILL.md` needs this header:
-
-```markdown
----
-name: my-skill
-description: What this skill does
-license: MIT
----
-
-# My Skill
-
-Details about your skill...
-```
-
 ## Supported Tools
 
-- OpenCode
-- ClaudeCode
-- Cursor
-- Codex
-- Amp
-- Antigravity
+CapSync supports 40+ AI coding tools:
+
+**A-C:** AdaL, Amp, Antigravity, Claude Code, Cline, CodeBuddy, Codex, Command Code, Continue, Crush, Cursor
+
+**D-G:** Droid, Gemini CLI, GitHub Copilot, Goose
+
+**J-K:** Junie, Kilo Code, Kimi CLI, Kiro CLI, Kode
+
+**M-N:** MCPJam, Moltbot, Mux, Neovate
+
+**O-Q:** OpenCode, OpenHands, OpenClaude IDE, Pi, Pochi, Qoder, Qwen Code
+
+**R-Z:** Replit, Roo Code, Trae, Trae CN, Windsurf, Zencoder
+
+And more...
 
 ## Development
 
