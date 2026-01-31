@@ -1,8 +1,11 @@
-use crate::config::{self, Config};
+use crate::config::{self, Config, DestinationConfig};
 use crate::detect::ToolDetector;
 use crate::sync::SyncManager;
 use anyhow::{Result, anyhow};
 use clap::{Parser, Subcommand};
+use std::collections::HashMap;
+use std::io::{self, Write};
+use std::path::PathBuf;
 
 #[derive(Parser)]
 #[command(name = "capsync")]
@@ -64,8 +67,67 @@ fn init_config() -> Result<()> {
         return Ok(());
     }
 
-    let default_config = Config::default();
-    config::save_config(&default_config).map_err(|e| {
+    println!("Welcome to CapSync! Let's set up your configuration.\n");
+
+    // Ask for source directory
+    let default_source = dirs::home_dir()
+        .unwrap_or_else(|| PathBuf::from("~"))
+        .join("Dev/scripts/skills/skills");
+    print!(
+        "Enter your skills directory [{}]: ",
+        default_source.display()
+    );
+    io::stdout().flush()?;
+    let mut source_input = String::new();
+    io::stdin().read_line(&mut source_input)?;
+    let source = if source_input.trim().is_empty() {
+        default_source
+    } else {
+        PathBuf::from(source_input.trim())
+    };
+
+    // Auto-detect tools
+    println!("\nDetecting installed tools...");
+    let detected = ToolDetector::detect_all();
+
+    let mut destinations = HashMap::new();
+    let home = dirs::home_dir().unwrap_or_else(|| PathBuf::from("~"));
+
+    // Define all possible tools and their default paths
+    let all_tools = [
+        ("opencode", home.join(".config/opencode/skill")),
+        ("claude", home.join(".claude/skills")),
+        ("codex", home.join(".codex/skills")),
+        ("cursor", home.join(".cursor/skills")),
+        ("amp", home.join(".agents/skills")),
+        ("antigravity", home.join(".agent/skills")),
+    ];
+
+    for (name, path) in all_tools {
+        let detected_enabled = detected.contains(&name.to_string());
+        destinations.insert(
+            name.to_string(),
+            DestinationConfig {
+                enabled: detected_enabled,
+                path,
+            },
+        );
+    }
+
+    // Show what was detected
+    if detected.is_empty() {
+        println!("No tools detected. You can enable them manually in the config.");
+    } else {
+        println!("Detected and enabled: {}", detected.join(", "));
+    }
+
+    // Create and save config
+    let config = Config {
+        source,
+        destinations,
+    };
+
+    config::save_config(&config).map_err(|e| {
         anyhow!(
             "Failed to save configuration to {}: {}",
             config_path.display(),
@@ -73,9 +135,11 @@ fn init_config() -> Result<()> {
         )
     })?;
 
-    println!("Configuration created at: {}", config_path.display());
-    println!("You can now edit the file to customize your settings.");
-    println!("Run 'capsync detect-tools' to auto-detect installed tools.");
+    println!("\nConfiguration created at: {}", config_path.display());
+    println!("\nYou can now:");
+    println!("  - Run 'capsync sync' to sync your skills");
+    println!("  - Edit the config to enable/disable tools");
+    println!("  - Run 'capsync config' to view your settings");
 
     Ok(())
 }
