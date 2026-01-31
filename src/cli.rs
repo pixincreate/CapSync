@@ -70,7 +70,6 @@ fn init_config() -> Result<()> {
 
     println!("Welcome to CapSync! Let's set up your configuration.\n");
 
-    // Ask for source directory (required)
     let source = loop {
         print!("Enter your skills directory: ");
         io::stdout().flush()?;
@@ -78,7 +77,6 @@ fn init_config() -> Result<()> {
         io::stdin().read_line(&mut source_input)?;
         let trimmed = source_input.trim();
         if !trimmed.is_empty() {
-            // Expand shell variables like $HOME and tilde
             let expanded =
                 shellexpand::full(trimmed).map_err(|e| anyhow!("Failed to expand path: {}", e))?;
             break PathBuf::from(expanded.as_ref());
@@ -86,13 +84,11 @@ fn init_config() -> Result<()> {
         println!("Please enter a path.");
     };
 
-    // Auto-detect tools
     println!("\nDetecting installed tools...");
     let detected = ToolDetector::detect_all();
 
     let mut destinations = HashMap::new();
 
-    // Use tools module for all tool definitions
     for tool in all_tools() {
         let detected_enabled = detected.contains(&tool.name.to_string());
         destinations.insert(
@@ -207,30 +203,28 @@ fn show_status() -> Result<()> {
     println!("Status:");
     println!("=======");
 
-    // Check source
     if config.source.exists() {
-        println!("Source: {} ✓", config.source.display());
+        println!("Source: {}", config.source.display());
     } else {
-        println!("Source: {} ✗ (does not exist)", config.source.display());
+        println!("Source: {} (does not exist)", config.source.display());
     }
 
     println!("\nDestinations:");
     for (name, dest) in &config.destinations {
         let path = &dest.path;
         if path.is_symlink() {
-            // Check if symlink is broken
             match path.read_link() {
                 Ok(target) => {
                     if target.exists() {
                         println!(
-                            "  {}: {} ✓ (symlink -> {})",
+                            "  {}: {} (symlink -> {})",
                             name,
                             path.display(),
                             target.display()
                         );
                     } else {
                         println!(
-                            "  {}: {} ⚠ (broken symlink -> {})",
+                            "  {}: {} (broken symlink -> {})",
                             name,
                             path.display(),
                             target.display()
@@ -238,11 +232,11 @@ fn show_status() -> Result<()> {
                     }
                 }
                 Err(_) => {
-                    println!("  {}: {} ✗ (cannot read symlink)", name, path.display());
+                    println!("  {}: {} (cannot read symlink)", name, path.display());
                 }
             }
         } else if path.exists() {
-            println!("  {}: {} ⚠ (exists, not a symlink)", name, path.display());
+            println!("  {}: {} (exists, not a symlink)", name, path.display());
         } else {
             println!("  {}: {} - (not synced)", name, path.display());
         }

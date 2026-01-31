@@ -31,14 +31,12 @@ impl SyncManager {
     fn sync_destination(source: &Path, dest_config: &DestinationConfig) -> Result<()> {
         let dest = &dest_config.path;
 
-        // Create parent directory if it doesn't exist
         if let Some(parent) = dest.parent() {
             if !parent.exists() {
                 fs::create_dir_all(parent)?;
             }
         }
 
-        // Remove existing symlink/file/directory if it exists
         if dest.exists() || dest.is_symlink() {
             if dest.is_symlink() {
                 fs::remove_file(dest)?;
@@ -49,7 +47,6 @@ impl SyncManager {
             }
         }
 
-        // Create symlink
         Self::create_symlink(source, dest)?;
 
         Ok(())
@@ -149,14 +146,14 @@ impl SyncResult {
         if !self.successful.is_empty() {
             println!("\nSynced successfully:");
             for name in &self.successful {
-                println!("  ✓ {name}");
+                println!("  {name}");
             }
         }
 
         if !self.errors.is_empty() {
             println!("\nErrors:");
             for (name, error) in &self.errors {
-                println!("  ✗ {name}: {error}");
+                println!("  {name}: {error}");
             }
         }
     }

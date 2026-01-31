@@ -32,7 +32,7 @@ impl Default for Config {
         }
 
         Self {
-            source: PathBuf::new(), // No default - user must provide
+            source: PathBuf::new(),
             destinations,
         }
     }
