@@ -2,7 +2,7 @@ use crate::config::{self, Config, DestinationConfig};
 use crate::detect::ToolDetector;
 use crate::sync::SyncManager;
 use crate::tools::{all_tools, get_tool};
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use clap::{Parser, Subcommand};
 use std::collections::HashMap;
 use std::io::{self, Write};
@@ -73,8 +73,14 @@ fn init_config() -> Result<()> {
 
     if config_path.exists() {
         println!("Configuration already exists at: {}", config_path.display());
-        println!("Use 'capsync config' to view current configuration.");
-        return Ok(());
+        print!("Re-initialize? This will overwrite your current config. [y/N]: ");
+        io::stdout().flush()?;
+        let mut confirm = String::new();
+        io::stdin().read_line(&mut confirm)?;
+        if confirm.trim().to_lowercase() != "y" {
+            println!("Aborted.");
+            return Ok(());
+        }
     }
 
     println!("Welcome to CapSync! Let's set up your configuration.\n");
