@@ -1,5 +1,5 @@
 use crate::config::Config;
-use anyhow::{Context, Result, anyhow};
+use anyhow::{anyhow, Context, Result};
 use std::fs;
 use std::path::Path;
 
@@ -32,8 +32,8 @@ impl SyncManager {
         let mut result = SyncResult::new();
 
         let commands_source = match &config.commands_source {
-            Some(source) => source,
-            None => return Ok(result),
+            Some(source) if !source.as_os_str().is_empty() => source,
+            _ => return Ok(result),
         };
 
         if !commands_source.exists() {

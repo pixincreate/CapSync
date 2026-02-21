@@ -2,7 +2,7 @@ use crate::config::{self, Config, DestinationConfig};
 use crate::detect::ToolDetector;
 use crate::sync::SyncManager;
 use crate::tools::{all_tools, get_tool};
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use clap::{Parser, Subcommand};
 use std::collections::HashMap;
 use std::io::{self, Write};
@@ -212,7 +212,7 @@ fn show_config() -> Result<()> {
         for (name, dest) in enabled {
             println!("  {}: {}", name, dest.skills_path.display());
             if let Some(commands_path) = &dest.commands_path {
-                println!("    Commands: {}", commands_path.display());
+                println!("  {} commands: {}", name, commands_path.display());
             }
         }
     }

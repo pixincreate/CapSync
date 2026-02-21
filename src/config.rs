@@ -47,7 +47,10 @@ impl Default for Config {
 
 impl Config {
     pub fn has_commands(&self) -> bool {
-        self.commands_source.is_some()
+        self.commands_source
+            .as_ref()
+            .map(|p| !p.as_os_str().is_empty())
+            .unwrap_or(false)
     }
 
     pub fn validate(&self) -> Result<()> {
