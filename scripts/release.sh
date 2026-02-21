@@ -97,13 +97,11 @@ update_version_files() {
         exit 1
     fi
 
-    sed -i.bak \
-        -e "s/^version = .*/version = \"$VERSION\"/" \
-        Cargo.toml
-    rm Cargo.toml.bak
-
-    sed -i.bak "s/## \[Unreleased\]$/## [Unreleased]$'\n\n'## [$VERSION] - $DATE/" CHANGELOG.md
-    rm CHANGELOG.md.bak
+sed -i.bak \
+    -e "s/^## \[Unreleased\]$/## [Unreleased]\\
+\\
+## [$VERSION] - $DATE/" \
+    CHANGELOG.md && rm CHANGELOG.md.bak
 
     echo "Updated version to $VERSION in Cargo.toml and CHANGELOG.md"
 }

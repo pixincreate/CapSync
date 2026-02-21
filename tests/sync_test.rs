@@ -111,6 +111,10 @@ fn test_sync_all_with_only_skills_source() {
     let skills_dir = temp_dir.path().join("skills");
     fs::create_dir_all(&skills_dir).unwrap();
 
+    // Create a test skill directory to sync
+    let test_skill = skills_dir.join("test-skill");
+    fs::create_dir_all(&test_skill).unwrap();
+
     let config = create_test_config(
         Some(skills_dir.to_str().unwrap()),
         None,
