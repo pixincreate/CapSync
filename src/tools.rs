@@ -48,7 +48,7 @@ static ALL_TOOLS_VEC: LazyLock<Vec<Tool>> = LazyLock::new(|| {
             Some(".config/opencode/commands"),
         ),
         Tool::new("openhands", ".openhands", ".openhands/skills", None),
-        Tool::new("openclaw", ".openclaw", "skills/", None),
+        Tool::new("openclaw", ".openclaw", ".openclaw/skills", None),
         Tool::new("pi", ".pi", ".pi/skills", None),
         Tool::new("pochi", ".pochi", ".pochi/skills", None),
         Tool::new("qoder", ".qoder", ".qoder/skills", None),

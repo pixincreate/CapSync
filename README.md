@@ -376,8 +376,6 @@ Run the test suite with coverage:
 cargo test
 ```
 
-Commands are named with a tool prefix (e.g., `opencode_test.md`, `claude_test.md`) in your source directory. CapSync strips the prefix when syncing, so `opencode_test.md` becomes `test.md` in the destination.
-
 ### Directory Structure
 
 Your commands source can be:
