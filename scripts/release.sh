@@ -63,7 +63,7 @@ if ! [[ $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9\.]+)?$ ]]; then
 fi
 
 validate_changelog_for_pr() {
-    if ! grep -q "\[Unreleased\]" CHANGELOG.md; then
+    if ! grep -q "## \[Unreleased\]" CHANGELOG.md; then
         echo "Error: CHANGELOG.md doesn't contain an [Unreleased] section"
         echo "Please update CHANGELOG.md before releasing"
         exit 1
@@ -77,7 +77,7 @@ validate_changelog_for_pr() {
 }
 
 validate_changelog_for_tag() {
-    if ! grep -q "\[Unreleased\]" CHANGELOG.md; then
+    if ! grep -q "## \[Unreleased\]" CHANGELOG.md; then
         echo "Error: CHANGELOG.md doesn't contain an [Unreleased] section"
         exit 1
     fi
@@ -102,8 +102,7 @@ update_version_files() {
         Cargo.toml
     rm Cargo.toml.bak
 
-    sed -i.bak "s/## \[Unreleased\]/## [Unreleased]/" CHANGELOG.md
-    echo "## [$VERSION] - $DATE" | cat - CHANGELOG.md.bak > CHANGELOG.md.tmp && mv CHANGELOG.md.tmp CHANGELOG.md
+    sed -i.bak "s/## \[Unreleased\]$/## [Unreleased]$'\n\n'## [$VERSION] - $DATE/" CHANGELOG.md
     rm CHANGELOG.md.bak
 
     echo "Updated version to $VERSION in Cargo.toml and CHANGELOG.md"

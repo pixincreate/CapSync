@@ -1,9 +1,10 @@
-## [2.0.0] - 2026-02-21
 # Changelog
 
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+
+## [2.0.0] - 2026-02-21
 
 ### Added
 
