@@ -5,10 +5,20 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- **Commands support**: Sync custom slash commands alongside skills
+  - Supports OpenCode, Claude Code, Kilo Code, and Codex
+  - Auto-detects `commands/` subdirectory during init
+  - Commands prefixed with tool name (e.g., `opencode_test.md`) are stripped during sync
+- **New tools support**: Added Augment, Cortex, iFlow CLI, Mistral Vibe
+- Fixed tool paths: OpenClaw, Pi, Windsurf, GitHub Copilot, Replit
 - Created detailed technical documentation in `documentation/detailed-working.md`
 - Documentation covers design, approach, features, and working with conversational tone
 
 ### Changed
+- Renamed config field `source` → `skills_source` (backward serde alias)
+- Renamed config compatible via field `path` → `skills_path` (backward compatible via serde alias)
+- Added `commands_source` and `commands_path` fields to configuration
+- `sync` now syncs both skills AND commands (if commands_source is configured)
 - Rewrote README with clearer explanations and better structure
 - Added "Important Notice" section explaining what CapSync is and is not
 - Simplified license section while maintaining accuracy
