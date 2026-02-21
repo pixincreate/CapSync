@@ -2,7 +2,7 @@ use crate::config::{self, Config, DestinationConfig};
 use crate::detect::ToolDetector;
 use crate::sync::SyncManager;
 use crate::tools::{all_tools, get_tool};
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use clap::{Parser, Subcommand};
 use std::collections::HashMap;
 use std::io::{self, Write};
@@ -236,6 +236,7 @@ fn detect_tools() -> Result<()> {
 
 fn sync_all() -> Result<()> {
     let config = config::load_config()?;
+    config.validate()?;
 
     println!("Syncing skills and commands...");
     println!("===========================");
