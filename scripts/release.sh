@@ -144,7 +144,7 @@ create_pr() {
 
     update_version_files
 
-    git add Cargo.toml CHANGELOG.md
+    git add Cargo.toml CHANGELOG.md Cargo.lock
     git commit -m "release(CapSync): version $VERSION [skip ci]"
     git push -u origin "$RELEASE_BRANCH"
 
@@ -152,12 +152,11 @@ create_pr() {
 
         LABEL="release"
 
-        if ! gh label view "$LABEL" >/dev/null 2>&1; then
-            echo "Label '$LABEL' does not exist. Creating it..."
-            gh label create "$LABEL" \
-                --color "B60205" \
-                --description "Release related pull requests"
-        fi
+        echo "Ensuring label '$LABEL' exists..."
+        gh label create "$LABEL" \
+            --color "B60205" \
+            --description "Release related pull requests" \
+            2>/dev/null || gh label edit "$LABEL" --color "B60205" --description "Release related pull requests" 2>/dev/null || true
 
         gh pr create \
             --title "release(CapSync): version $VERSION" \
