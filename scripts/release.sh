@@ -11,7 +11,7 @@
 #   ./scripts/release.sh create_tag 1.0.1 --publish-crates
 #   ```
 
-set -e
+set -euo pipefail
 
 usage() {
     echo "Usage: $0 <function_name> <version> [--publish-crates|-p]"
@@ -98,6 +98,11 @@ update_version_files() {
     fi
 
 sed -i.bak \
+        -e "s/^version = .*/version = \"$VERSION\"/" \
+        Cargo.toml
+    rm Cargo.toml.bak
+
+sed -i.bak \
     -e "s/^## \[Unreleased\]$/## [Unreleased]\\
 \\
 ## [$VERSION] - $DATE/" \
@@ -143,9 +148,16 @@ create_pr() {
     git commit -m "release(CapSync): version $VERSION [skip ci]"
     git push -u origin "$RELEASE_BRANCH"
 
-    if command -v gh >/dev/null 2>&1; then
-        # Get authenticated username
-        GH_USER=$(gh auth whoami 2>/dev/null || echo "")
+    if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
+
+        LABEL="release"
+
+        if ! gh label view "$LABEL" >/dev/null 2>&1; then
+            echo "Label '$LABEL' does not exist. Creating it..."
+            gh label create "$LABEL" \
+                --color "B60205" \
+                --description "Release related pull requests"
+        fi
 
         gh pr create \
             --title "release(CapSync): version $VERSION" \
@@ -158,9 +170,8 @@ create_pr() {
 - Run ./scripts/release.sh create_tag $VERSION [--publish-crates]" \
             --head "$RELEASE_BRANCH" \
             --base "master" \
-            --assignee "${GH_USER:-@me}" \
-            --label "release" \
-            --milestone "$VERSION"
+            --assignee @me \
+            --label "$LABEL"
     else
         echo "Release branch pushed: $RELEASE_BRANCH"
         echo "Open a PR targeting master and include:"
