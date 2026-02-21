@@ -107,6 +107,7 @@ jobs:
           SSH_KEY: ${{ secrets.SSH_SIGNING_KEY }}
         shell: bash
         run: |
+          trap 'rm -f "$HOME/.ssh/id_signing"' EXIT
           mkdir -p "$HOME/.ssh"
           echo "$SSH_KEY" > "$HOME/.ssh/id_signing"
           chmod 600 "$HOME/.ssh/id_signing"
@@ -115,7 +116,6 @@ jobs:
           cd dist
           ssh-keygen -Y sign -f "$HOME/.ssh/id_signing" -n file "$FILE"
 
-          rm "$HOME/.ssh/id_signing"
           ls -la
 
       - name: Generate SHA-256 Checksums
@@ -153,7 +153,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download Build Artifacts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v6
         with:
           path: dist
           merge-multiple: true
