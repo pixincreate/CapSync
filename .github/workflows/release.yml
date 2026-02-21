@@ -3,76 +3,167 @@ name: Release
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to release (e.g. v0.2.1)"
+        required: true
+        type: string
 
 permissions:
   contents: write
 
 env:
-  PROJECT_NAME: "capsync"
+  BINARY_NAME: "capsync"
+  PACKAGE_NAME: "capsync"
 
 jobs:
-  build-and-release:
-    runs-on: ${{ matrix.os }}
+  extract-notes:
+    name: Extract Release Notes
+    runs-on: ubuntu-latest
+    outputs:
+      notes: ${{ steps.notes.outputs.result }}
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.inputs.tag || github.ref_name }}
+
+      - name: Extract Version
+        id: version
+        run: |
+          REF="${{ github.event.inputs.tag || github.ref_name }}"
+          VERSION="${REF#v}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Extract Release Notes from Changelog
+        id: notes
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          NOTES=$(awk -v ver="$VERSION" '
+            /^## \[/ { if (p) exit; if ($2 == "["ver"]") { p=1; next } }
+            p { print }
+          ' CHANGELOG.md)
+
+          echo "result<<EOF" >> $GITHUB_OUTPUT
+          echo "$NOTES" >> $GITHUB_OUTPUT
+          echo -e "\n---\n" >> $GITHUB_OUTPUT
+          echo "See [\`README.md\`](./README.md) for installation info." >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+  build:
+    name: Build Binary (${{ matrix.asset }})
+    needs: extract-notes
     strategy:
       matrix:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            asset_name: linux
-            arch: x86_64
+            asset: linux-x86_64
           - os: macos-latest
             target: x86_64-apple-darwin
-            asset_name: darwin
-            arch: x86_64
+            asset: darwin-x86_64
           - os: macos-latest
             target: aarch64-apple-darwin
-            asset_name: darwin
-            arch: aarch64
-
+            asset: darwin-aarch64
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            asset: windows-x86_64
+    runs-on: ${{ matrix.os }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+        with:
+          ref: v${{ needs.extract-notes.outputs.version }}
 
-      - name: Install Rust
+      - name: Install Rust Toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
 
-      - name: Install cross-compilation tools
-        if: matrix.target == 'aarch64-apple-darwin'
-        run: |
-          rustup target add aarch64-apple-darwin
+      - name: Build Release Binary
+        run: cargo build --release --target ${{ matrix.target }} -p ${{ env.PACKAGE_NAME }}
 
-      - name: Build Binary
-        run: |
-          cargo build --release --target ${{ matrix.target }}
-
-      - name: Prepare Asset
+      - name: Package Binary
         shell: bash
         run: |
-          mkdir -p release
-          BINARY_NAME="${{ env.PROJECT_NAME }}"
-          if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            BINARY_NAME="${BINARY_NAME}.exe"
-          fi
-          cp "target/${{ matrix.target }}/release/${BINARY_NAME}" "release/${{ env.PROJECT_NAME }}-${{ matrix.asset_name }}-${{ matrix.arch }}"
+          mkdir -p dist
+          EXT="${{ matrix.os == 'windows-latest' && '.exe' || '' }}"
+          SRC="target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}${EXT}"
+          DST="dist/${{ env.BINARY_NAME }}-${{ matrix.asset }}${EXT}"
+          cp "$SRC" "$DST"
 
-      - name: Generate SHA-256
-        run: |
-          if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            certutil -hashfile "release/${{ env.PROJECT_NAME }}-${{ matrix.asset_name }}-${{ matrix.arch }}" SHA256 | grep -v "hash" > "release/${{ env.PROJECT_NAME }}-${{ matrix.asset_name }}-${{ matrix.arch }}.sha256"
-          else
-            shasum -a 256 "release/${{ env.PROJECT_NAME }}-${{ matrix.asset_name }}-${{ matrix.arch }}" > "release/${{ env.PROJECT_NAME }}-${{ matrix.asset_name }}-${{ matrix.arch }}.sha256"
+          # Verify
+          test -f "$DST" || { echo "Binary not found"; exit 1; }
+          if [ "${{ matrix.os }}" != "windows-latest" ]; then
+            chmod +x "$DST"
+            "$DST" --help || true
           fi
+
+      - name: Sign Binary with SSH Key
+        env:
+          SSH_KEY: ${{ secrets.SSH_SIGNING_KEY }}
+        shell: bash
+        run: |
+          trap 'rm -f "$HOME/.ssh/id_signing"' EXIT
+          mkdir -p "$HOME/.ssh"
+          echo "$SSH_KEY" > "$HOME/.ssh/id_signing"
+          chmod 600 "$HOME/.ssh/id_signing"
+
+          FILE="${{ env.BINARY_NAME }}-${{ matrix.asset }}${{ matrix.os == 'windows-latest' && '.exe' || '' }}"
+          cd dist
+          ssh-keygen -Y sign -f "$HOME/.ssh/id_signing" -n file "$FILE"
+
+          ls -la
+
+      - name: Generate SHA-256 Checksums
+        shell: bash
+        run: |
+          cd dist
+          FILE="${{ env.BINARY_NAME }}-${{ matrix.asset }}${{ matrix.os == 'windows-latest' && '.exe' || '' }}"
+
+          # Generate checksum for binary
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            certutil -hashfile "$FILE" SHA256 | grep -v "hash" > "${FILE}.sha256"
+          else
+            shasum -a 256 "$FILE" > "${FILE}.sha256"
+          fi
+
+          # Generate checksum for signature if it exists
+          if [ -f "${FILE}.sig" ]; then
+            if [ "${{ matrix.os }}" = "windows-latest" ]; then
+              certutil -hashfile "${FILE}.sig" SHA256 | grep -v "hash" > "${FILE}.sig.sha256"
+            else
+              shasum -a 256 "${FILE}.sig" > "${FILE}.sig.sha256"
+            fi
+          fi
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: ${{ matrix.asset }}
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    name: Create GitHub Release
+    needs: [extract-notes, build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Build Artifacts
+        uses: actions/download-artifact@v6
+        with:
+          path: dist
+          merge-multiple: true
 
       - name: Create Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2.5.0
         with:
-          name: "CapSync ${{ github.ref_name }}"
-          files: |
-            release/${{ env.PROJECT_NAME }}-${{ matrix.asset_name }}-${{ matrix.arch }}
-            release/${{ env.PROJECT_NAME }}-${{ matrix.asset_name }}-${{ matrix.arch }}.sha256
-          draft: false
-          prerelease: false
+          tag_name: v${{ needs.extract-notes.outputs.version }}
+          name: CapSync v${{ needs.extract-notes.outputs.version }}
+          body: ${{ needs.extract-notes.outputs.notes }}
+          files: dist/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

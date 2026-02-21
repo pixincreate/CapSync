@@ -1,44 +1,46 @@
 # CapSync
 
-Stop copying your AI skills between tools. Do it once, use them everywhere.
+Stop copying your AI skills and commands between tools. Do it once, use them everywhere.
 
 ## What is CapSync?
 
-You have a collection of AI coding skills. Maybe they are prompts, context files, or reusable instructions. You want to use these skills across multiple AI coding assistants: OpenCode, Claude Code, Cursor, Codex, and dozens of others.
+You have a collection of AI coding skills and custom commands. Maybe they are prompts, context files, reusable instructions, or slash commands. You want to use these across multiple AI coding assistants: OpenCode, Claude Code, Cursor, Codex, and dozens of others.
 
-The problem? Each tool stores skills in a different location:
+The problem? Each tool stores skills and commands in different locations:
 
-| Tool        | Skills Location             |
-| ----------- | --------------------------- |
-| OpenCode    | `~/.config/opencode/skill/` |
-| Claude Code | `~/.claude/skills/`         |
-| Cursor      | `~/.cursor/skills/`         |
-| Codex       | `~/.codex/skills/`          |
-| Amp         | `~/.agents/skills/`         |
-| Antigravity | `~/.agent/skills/`          |
+| Tool        | Skills Location             | Commands Location           |
+| ----------- | --------------------------- | -------------------------- |
+| OpenCode    | `~/.config/opencode/skill/` | `~/.config/opencode/commands/` |
+| Claude Code | `~/.claude/skills/`         | `~/.claude/commands/`      |
+| Cursor      | `~/.cursor/skills/`        | -                          |
+| Codex       | `~/.codex/skills/`         | `~/.codex/commands/`       |
+| Kilo Code   | `~/.kilocode/skills/`      | `~/.kilocode/commands/`   |
+| Amp         | `~/.agents/skills/`        | -                          |
+| Antigravity | `~/.agent/skills/`         | -                          |
 
 And that is just six tools. CapSync supports over 40.
 
-CapSync solves this by creating a single source of truth for your skills. You maintain one skills directory. CapSync creates symlinks from that directory to each tool's expected location. Add a skill once, it appears in every tool. Remove it once, it disappears everywhere.
+CapSync solves this by creating a single source of truth for your skills and commands. You maintain one skills directory and optionally one commands directory. CapSync creates symlinks from those directories to each tool's expected location. Add a skill or command once, it appears in every tool. Remove it once, it disappears everywhere.
 
 ## Important Notice
 
 **What CapSync Is:**
 
-- A synchronization tool that links your existing skills to multiple AI coding assistants
-- A symlink manager that keeps one skills directory in sync with many tools
+- A synchronization tool that links your existing skills and commands to multiple AI coding assistants
+- A symlink manager that keeps your skills and commands directories in sync with many tools
 
 **What CapSync Is Not:**
 
-- A skill discovery tool. CapSync does not find or download skills from the internet
-- A skill installer. You must already have skills in your source directory
-- A skill creator. CapSync only syncs what you already have
+- A skill or command discovery tool. CapSync does not find or download skills/commands from the internet
+- A skill or command installer. You must already have skills/commands in your source directories
+- A skill or command creator. CapSync only syncs what you already have
 
 **Prerequisites:**
-You need to have skills already installed in a local directory before using CapSync. CapSync assumes you have:
+You need to have skills (and optionally commands) already installed in local directories before using CapSync. CapSync assumes you have:
 
-- A directory containing your skills (e.g., `~/Dev/scripts/skills/skills`)
-- Skills formatted for your AI tools (typically directories with `SKILL.md` files)
+- A directory containing your skills (e.g., `~/Dev/scripts/skills`)
+- Optionally, a directory containing your commands (e.g., `~/Dev/scripts/commands`)
+- Skills and commands formatted for your AI tools
 
 If you are looking for a tool to discover and install skills from a registry or repository, that is not what CapSync does. That may be a future feature, but for now, CapSync only syncs skills you already possess.
 
@@ -98,15 +100,33 @@ cargo install --path .
 Run `capsync init` to create your configuration. The tool will:
 
 1. Ask for your skills directory path (supports `$HOME`, `~`, and other shell variables)
-2. Scan your system for installed AI coding tools
-3. Add only the detected tools to your configuration
-4. Enable those tools automatically
+2. Automatically detect if a `commands/` subdirectory exists in your skills directory
+3. Prompt to enable commands if found
+4. Scan your system for installed AI coding tools
+5. Add only the detected tools to your configuration
+6. Enable those tools automatically
 
 ```bash
 $ capsync init
 Welcome to CapSync! Let's set up your configuration.
 
-Enter your skills directory: $HOME/Dev/scripts/skills/skills
+Enter your skills directory: $HOME/Dev/scripts/skills
+
+Detecting installed tools...
+Detected and enabled: claude, opencode
+
+Configuration created at /Users/you/.config/capsync/config.toml
+```
+
+If a `commands/` subdirectory is found in your skills directory:
+
+```bash
+$ capsync init
+Welcome to CapSync! Let's set up your configuration.
+
+Enter your skills directory: $HOME/Dev/scripts/skills
+
+Found commands/ subdirectory. Enable commands? [Y/n]: Y
 
 Detecting installed tools...
 Detected and enabled: claude, opencode
@@ -119,7 +139,7 @@ Configuration created at /Users/you/.config/capsync/config.toml
 After initial setup, your workflow is simple:
 
 ```bash
-# Sync your skills to all enabled tools
+# Sync your skills and commands to all enabled tools
 capsync sync
 
 # Check the status of your symlinks
@@ -128,6 +148,8 @@ capsync status
 # View your current configuration
 capsync config
 ```
+
+> **Note:** If `commands_source` is not configured, `sync` will only sync skills.
 
 ### Adding New Tools
 
@@ -217,24 +239,27 @@ After CapSync:
 CapSync stores its configuration at `~/.config/capsync/config.toml`:
 
 ```toml
-source = "/Users/you/Dev/scripts/skills"
+skills_source = "/Users/you/Dev/scripts/skills"
+commands_source = "/Users/you/Dev/scripts/commands"
 
 [destinations.opencode]
 enabled = true
-path = "/Users/you/.config/opencode/skill"
+skills_path = "/Users/you/.config/opencode/skill"
+commands_path = "/Users/you/.config/opencode/commands"
 
 [destinations.claude]
 enabled = true
-path = "/Users/you/.claude/skills"
+skills_path = "/Users/you/.claude/skills"
+commands_path = "/Users/you/.claude/commands"
 
 [destinations.cursor]
 enabled = false
-path = "/Users/you/.cursor/skills"
+skills_path = "/Users/you/.cursor/skills"
 ```
 
 You can manually edit this file to:
 
-- Change the source directory
+- Change the skills and/or commands source directories
 - Enable or disable specific tools
 - Adjust destination paths if your tools use non-standard locations
 
@@ -242,17 +267,26 @@ You can manually edit this file to:
 
 CapSync currently supports 40+ AI coding assistants:
 
-**A-C**: AdaL, Amp, Antigravity, Claude Code, Cline, CodeBuddy, Codex, Command Code, Continue, Crush, Cursor
+**A-C**: AdaL, Amp, Antigravity, Augment, Claude Code, Cline, CodeBuddy, Codex, Command Code, Continue, Cortex, Crush, Cursor
 
 **D-G**: Droid, Gemini CLI, GitHub Copilot, Goose
 
-**J-K**: Junie, Kilo Code, Kimi CLI, Kiro CLI, Kode
+**I-K**: iFlow CLI, Junie, Kilo Code, Kimi CLI, Kiro CLI, Kode
 
-**M-N**: MCPJam, Moltbot, Mux, Neovate
+**M-N**: MCPJam, Mistral Vibe, Moltbot, Mux, Neovate
 
-**O-Q**: OpenCode, OpenHands, OpenClaude IDE, Pi, Pochi, Qoder, Qwen Code
+**O-Q**: OpenCode, OpenHands, OpenClaw, Pi, Pochi, Qoder, Qwen Code
 
 **R-Z**: Replit, Roo Code, Trae, Trae CN, Windsurf, Zencoder
+
+### Commands Support
+
+Not all tools support commands. Currently, the following tools support command syncing:
+
+- **Claude Code**: `~/.claude/commands/`
+- **OpenCode**: `~/.config/opencode/commands/`
+- **Kilo Code**: `~/.kilocode/commands/`
+- **Codex**: `~/.codex/commands/`
 
 Missing a tool? CapSync is designed to easily add new tools. Open an issue or submit a PR.
 
@@ -318,6 +352,54 @@ Detailed instructions for the AI...
 ```
 
 CapSync syncs the entire directory structure, so your skills can include multiple files, subdirectories, or any format your tools support.
+
+## Command Format
+
+Commands are typically markdown files that define slash commands for AI tools:
+
+```
+your-command.md
+```
+
+Example command file:
+
+```markdown
+---
+name: test
+description: Run test suite
+---
+
+# Test Command
+
+Run the test suite with coverage:
+
+cargo test
+```
+
+### Directory Structure
+
+Your commands source can be:
+
+1. **A separate directory** (recommended):
+   ```
+   ~/my-commands/
+   ├── opencode_deploy.md
+   ├── opencode_test.md
+   ├── claude_deploy.md
+   └── claude_test.md
+   ```
+
+2. **A `commands/` subdirectory** in your skills directory:
+   ```
+   ~/my-skills/
+   ├── commands/
+   │   ├── opencode_deploy.md
+   │   └── claude_deploy.md
+   └── my-skill/
+       └── SKILL.md
+   ```
+
+CapSync auto-detects the `commands/` subdirectory during init and prompts to enable command syncing.
 
 ## Development
 

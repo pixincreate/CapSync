@@ -136,8 +136,8 @@ Running sync...
 Validates the tool name. If you typo it, you'll know:
 
 ```bash
-$ capsync add curso
-Error: Tool 'curso' does not exist or is unsupported
+$ capsync add cursor-new
+Error: Tool 'cursor-new' does not exist or is unsupported
 ```
 
 Use `--no-sync` if you just want to add without syncing immediately.
