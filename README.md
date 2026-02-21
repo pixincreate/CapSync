@@ -373,7 +373,7 @@ description: Run test suite
 
 Run the test suite with coverage:
 
-npm test -- --coverage
+cargo test
 ```
 
 Commands are named with a tool prefix (e.g., `opencode_test.md`, `claude_test.md`) in your source directory. CapSync strips the prefix when syncing, so `opencode_test.md` becomes `test.md` in the destination.
