@@ -49,6 +49,15 @@ impl Config {
     pub fn has_commands(&self) -> bool {
         self.commands_source.is_some()
     }
+
+    pub fn validate(&self) -> Result<()> {
+        if self.skills_source.as_os_str().is_empty() {
+            return Err(anyhow::anyhow!(
+                "skills_source is not set. Run 'capsync init' to configure."
+            ));
+        }
+        Ok(())
+    }
 }
 
 pub fn load_config() -> Result<Config> {
