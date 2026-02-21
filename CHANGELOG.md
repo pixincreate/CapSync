@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.0.1] - 2026-02-22
+
 ### Added
 
 - Allow re-initialization with confirmation prompt

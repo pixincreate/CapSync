@@ -109,6 +109,9 @@ sed -i.bak \
     CHANGELOG.md && rm CHANGELOG.md.bak
 
     echo "Updated version to $VERSION in Cargo.toml and CHANGELOG.md"
+
+    # Update Cargo.lock
+    cargo update
 }
 
 ensure_clean_master() {
