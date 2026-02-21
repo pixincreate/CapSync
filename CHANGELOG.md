@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- Allow re-initialization with confirmation prompt
+
+### Fixed
+
+- Check gh auth status before creating PR
+- Handle empty commands_source string gracefully
+
 ## [2.0.0] - 2026-02-22
 
 ### Added

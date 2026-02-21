@@ -49,7 +49,7 @@ impl Config {
     pub fn has_commands(&self) -> bool {
         self.commands_source
             .as_ref()
-            .map(|p| !p.as_os_str().is_empty())
+            .map(|path| !path.as_os_str().is_empty())
             .unwrap_or(false)
     }
 
