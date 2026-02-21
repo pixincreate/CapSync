@@ -1,5 +1,5 @@
 use crate::config::Config;
-use anyhow::{Context, Result, anyhow};
+use anyhow::{anyhow, Context, Result};
 use std::fs;
 use std::path::Path;
 
@@ -110,11 +110,11 @@ impl SyncManager {
         }
     }
 
-    fn remove_symlink(dest: &Path, _name: &str) -> Result<()> {
+    fn remove_symlink(dest: &Path, name: &str) -> Result<()> {
         if dest.is_symlink() {
             fs::remove_file(dest)
                 .with_context(|| format!("Failed to remove symlink at {}", dest.display()))?;
-            println!("Removed symlink from {}", dest.display());
+            println!("Removed {} symlink from {}", name, dest.display());
             Ok(())
         } else if dest.exists() {
             Err(anyhow!(
@@ -122,7 +122,11 @@ impl SyncManager {
                 dest.display()
             ))
         } else {
-            println!("No symlink found at {} (already removed?)", dest.display());
+            println!(
+                "No {} symlink found at {} (already removed?)",
+                name,
+                dest.display()
+            );
             Ok(())
         }
     }
