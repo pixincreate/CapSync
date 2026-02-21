@@ -14,11 +14,11 @@
 set -e
 
 usage() {
-    echo "Usage: $0 <function_name> <version> [--publish-crates|-p]\n"
+    echo "Usage: $0 <function_name> <version> [--publish-crates|-p]"
     echo ""
-    echo "Available functions: create_pr, create_tag, delete_tag\n"
+    echo "Available functions: create_pr, create_tag, delete_tag"
     echo ""
-    echo "Flags: --publish-crates, -p (only valid with create_tag)\n"
+    echo "Flags: --publish-crates, -p (only valid with create_tag)"
     echo ""
     echo "Example: $0 create_pr 1.0.0"
     echo "Example: $0 create_tag 1.0.0 --publish-crates"
