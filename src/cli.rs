@@ -53,7 +53,7 @@ pub fn run() -> Result<()> {
         Commands::Init => init_config(),
         Commands::Config => show_config(),
         Commands::DetectTools => detect_tools(),
-        Commands::Sync => sync_skills(),
+        Commands::Sync => sync_all(),
         Commands::Add { tool, no_sync } => add_tool(&tool, no_sync),
         Commands::Remove { tool, all } => {
             if all {
@@ -79,8 +79,8 @@ fn init_config() -> Result<()> {
 
     println!("Welcome to CapSync! Let's set up your configuration.\n");
 
-    let source = loop {
-        print!("Enter your skills directory: ");
+    let skills_source = loop {
+        print!("Enter your skills source directory: ");
         io::stdout().flush()?;
         let mut source_input = String::new();
         io::stdin().read_line(&mut source_input)?;
@@ -91,6 +91,40 @@ fn init_config() -> Result<()> {
             break PathBuf::from(expanded.as_ref());
         }
         println!("Please enter a path.");
+    };
+
+    let commands_source = {
+        let commands_dir = skills_source.join("commands");
+        if commands_dir.exists() && commands_dir.is_dir() {
+            println!("\nFound commands/ subdirectory in skills source.");
+            loop {
+                print!("Enable commands? [Y/n]: ");
+                io::stdout().flush()?;
+                let mut input = String::new();
+                io::stdin().read_line(&mut input)?;
+                let trimmed = input.trim().to_lowercase();
+                if trimmed.is_empty() || trimmed == "y" {
+                    break Some(commands_dir);
+                } else if trimmed == "n" {
+                    break None;
+                }
+                println!("Please enter Y or n.");
+            }
+        } else {
+            println!("\n(Optional) Enter commands source directory");
+            print!("(or press Enter to skip): ");
+            io::stdout().flush()?;
+            let mut input = String::new();
+            io::stdin().read_line(&mut input)?;
+            let trimmed = input.trim();
+            if trimmed.is_empty() {
+                None
+            } else {
+                let expanded = shellexpand::full(trimmed)
+                    .map_err(|e| anyhow!("Failed to expand path: {}", e))?;
+                Some(PathBuf::from(expanded.as_ref()))
+            }
+        }
     };
 
     println!("\nDetecting installed tools...");
@@ -105,7 +139,8 @@ fn init_config() -> Result<()> {
                 tool.name.to_string(),
                 DestinationConfig {
                     enabled: true,
-                    path: tool.skills_path,
+                    skills_path: tool.skills_path.clone(),
+                    commands_path: tool.commands_path.clone(),
                 },
             );
         }
@@ -119,7 +154,8 @@ fn init_config() -> Result<()> {
 
     // Create and save config
     let config = Config {
-        source,
+        skills_source,
+        commands_source,
         destinations,
     };
 
@@ -133,7 +169,7 @@ fn init_config() -> Result<()> {
 
     println!("\nConfiguration created at: {}", config_path.display());
     println!("\nYou can now:");
-    println!("  - Run 'capsync sync' to sync your skills");
+    println!("  - Run 'capsync sync' to sync your skills and commands");
     println!("  - Edit the config to enable/disable tools");
     println!("  - Run 'capsync config' to view your settings");
 
@@ -147,7 +183,14 @@ fn show_config() -> Result<()> {
     println!("Current Configuration:");
     println!("=====================");
     println!("Config file: {}", config_path.display());
-    println!("Source: {}", config.source.display());
+    println!("Skills source: {}", config.skills_source.display());
+
+    if let Some(commands_source) = &config.commands_source {
+        println!("Commands source: {}", commands_source.display());
+    } else {
+        println!("Commands source: (not configured)");
+    }
+
     println!();
 
     let enabled: Vec<_> = config
@@ -161,7 +204,10 @@ fn show_config() -> Result<()> {
     } else {
         println!("Enabled tools:");
         for (name, dest) in enabled {
-            println!("  {}: {}", name, dest.path.display());
+            println!("  {}: {}", name, dest.skills_path.display());
+            if let Some(commands_path) = &dest.commands_path {
+                println!("    Commands: {}", commands_path.display());
+            }
         }
     }
 
@@ -188,12 +234,16 @@ fn detect_tools() -> Result<()> {
     Ok(())
 }
 
-fn sync_skills() -> Result<()> {
+fn sync_all() -> Result<()> {
     let config = config::load_config()?;
 
-    println!("Syncing skills...");
-    println!("================");
-    println!("Source: {}", config.source.display());
+    println!("Syncing skills and commands...");
+    println!("===========================");
+    println!("Skills source: {}", config.skills_source.display());
+
+    if let Some(commands_source) = &config.commands_source {
+        println!("Commands source: {}", commands_source.display());
+    }
 
     let result = SyncManager::sync_all(&config)?;
     result.print();
@@ -228,7 +278,7 @@ fn add_tool(tool_name: &str, no_sync: bool) -> Result<()> {
         println!("Tool '{}' is already in the configuration", tool_name);
         if !no_sync {
             println!("Running sync...");
-            return sync_skills();
+            return sync_all();
         }
         return Ok(());
     }
@@ -238,7 +288,8 @@ fn add_tool(tool_name: &str, no_sync: bool) -> Result<()> {
         tool_name.to_string(),
         DestinationConfig {
             enabled: true,
-            path: tool.skills_path,
+            skills_path: tool.skills_path.clone(),
+            commands_path: tool.commands_path.clone(),
         },
     );
 
@@ -247,7 +298,7 @@ fn add_tool(tool_name: &str, no_sync: bool) -> Result<()> {
 
     if !no_sync {
         println!("Running sync...");
-        sync_skills()
+        sync_all()
     } else {
         Ok(())
     }
@@ -259,15 +310,31 @@ fn show_status() -> Result<()> {
     println!("Status:");
     println!("=======");
 
-    if config.source.exists() {
-        println!("Source: {}", config.source.display());
+    if config.skills_source.exists() {
+        println!("Skills source: {}", config.skills_source.display());
     } else {
-        println!("Source: {} (does not exist)", config.source.display());
+        println!(
+            "Skills source: {} (does not exist)",
+            config.skills_source.display()
+        );
+    }
+
+    if let Some(commands_source) = &config.commands_source {
+        if commands_source.exists() {
+            println!("Commands source: {}", commands_source.display());
+        } else {
+            println!(
+                "Commands source: {} (does not exist)",
+                commands_source.display()
+            );
+        }
+    } else {
+        println!("Commands source: (not configured)");
     }
 
     println!("\nDestinations:");
     for (name, dest) in &config.destinations {
-        let path = &dest.path;
+        let path = &dest.skills_path;
         if path.is_symlink() {
             match path.read_link() {
                 Ok(target) => {
@@ -295,6 +362,41 @@ fn show_status() -> Result<()> {
             println!("  {}: {} (exists, not a symlink)", name, path.display());
         } else {
             println!("  {}: {} - (not synced)", name, path.display());
+        }
+
+        if let Some(commands_path) = &dest.commands_path {
+            if commands_path.is_symlink() {
+                match commands_path.read_link() {
+                    Ok(target) => {
+                        if target.exists() {
+                            println!(
+                                "    commands: {} (symlink -> {})",
+                                commands_path.display(),
+                                target.display()
+                            );
+                        } else {
+                            println!(
+                                "    commands: {} (broken symlink -> {})",
+                                commands_path.display(),
+                                target.display()
+                            );
+                        }
+                    }
+                    Err(_) => {
+                        println!(
+                            "    commands: {} (cannot read symlink)",
+                            commands_path.display()
+                        );
+                    }
+                }
+            } else if commands_path.exists() {
+                println!(
+                    "    commands: {} (exists, not a symlink)",
+                    commands_path.display()
+                );
+            } else {
+                println!("    commands: {} - (not synced)", commands_path.display());
+            }
         }
     }
 

@@ -6,35 +6,48 @@ use std::path::PathBuf;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Config {
-    pub source: PathBuf,
+    #[serde(alias = "source", default)] // Added for backwards compatibility. Remove in future.
+    pub skills_source: PathBuf,
+    #[serde(default)]
+    pub commands_source: Option<PathBuf>,
     pub destinations: HashMap<String, DestinationConfig>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct DestinationConfig {
     pub enabled: bool,
-    pub path: PathBuf,
+    #[serde(alias = "path")] // Added for backwards compatibility. Remove in future.
+    pub skills_path: PathBuf,
+    #[serde(default)]
+    pub commands_path: Option<PathBuf>,
 }
 
 impl Default for Config {
     fn default() -> Self {
         let mut destinations = HashMap::new();
 
-        // Use tools module for all tool definitions
         for tool in all_tools() {
             destinations.insert(
                 tool.name.to_string(),
                 DestinationConfig {
                     enabled: false, // Default to disabled, let user enable what they want
-                    path: tool.skills_path,
+                    skills_path: tool.skills_path.clone(),
+                    commands_path: tool.commands_path.clone(),
                 },
             );
         }
 
         Self {
-            source: PathBuf::new(),
+            skills_source: PathBuf::new(),
+            commands_source: None,
             destinations,
         }
+    }
+}
+
+impl Config {
+    pub fn has_commands(&self) -> bool {
+        self.commands_source.is_some()
     }
 }
 
