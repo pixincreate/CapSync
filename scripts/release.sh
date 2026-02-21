@@ -146,6 +146,9 @@ create_pr() {
     git push -u origin "$RELEASE_BRANCH"
 
     if command -v gh >/dev/null 2>&1; then
+        # Get authenticated username
+        GH_USER=$(gh auth whoami 2>/dev/null || echo "")
+
         gh pr create \
             --title "release(CapSync): version $VERSION" \
             --body "## Summary
@@ -157,8 +160,9 @@ create_pr() {
 - Run ./scripts/release.sh create_tag $VERSION [--publish-crates]" \
             --head "$RELEASE_BRANCH" \
             --base "master" \
-            --assignee "@me" \
-            --label "release"
+            --assignee "${GH_USER:-@me}" \
+            --label "release" \
+            --milestone "$VERSION"
     else
         echo "Release branch pushed: $RELEASE_BRANCH"
         echo "Open a PR targeting master and include:"
@@ -192,7 +196,7 @@ create_tag() {
 
     echo "Tag v$VERSION created and pushed!"
     echo "The release workflow should start automatically. Monitor progress at:"
-    echo "https://github.com/pixincreate/capsync/actions"
+    echo "https://github.com/pixincreate/CapSync/actions"
 }
 
 delete_tag() {
