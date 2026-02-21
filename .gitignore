@@ -4,3 +4,6 @@
 # macOS specifics
 .DS_Store
 *.DS_Store
+
+# Environment variables
+.envrc
