@@ -63,7 +63,7 @@ if ! [[ $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9\.]+)?$ ]]; then
 fi
 
 validate_changelog_for_pr() {
-    if ! grep -q "\[Unreleased\]" CHANGELOG.md; then
+    if ! grep -q "## \[Unreleased\]" CHANGELOG.md; then
         echo "Error: CHANGELOG.md doesn't contain an [Unreleased] section"
         echo "Please update CHANGELOG.md before releasing"
         exit 1
@@ -77,7 +77,7 @@ validate_changelog_for_pr() {
 }
 
 validate_changelog_for_tag() {
-    if ! grep -q "\[Unreleased\]" CHANGELOG.md; then
+    if ! grep -q "## \[Unreleased\]" CHANGELOG.md; then
         echo "Error: CHANGELOG.md doesn't contain an [Unreleased] section"
         exit 1
     fi
@@ -102,8 +102,7 @@ update_version_files() {
         Cargo.toml
     rm Cargo.toml.bak
 
-    sed -i.bak "s/## \[Unreleased\]/## [Unreleased]/" CHANGELOG.md
-    echo "## [$VERSION] - $DATE" | cat - CHANGELOG.md.bak > CHANGELOG.md.tmp && mv CHANGELOG.md.tmp CHANGELOG.md
+    sed -i.bak "s/## \[Unreleased\]$/## [Unreleased]$'\n\n'## [$VERSION] - $DATE/" CHANGELOG.md
     rm CHANGELOG.md.bak
 
     echo "Updated version to $VERSION in Cargo.toml and CHANGELOG.md"
@@ -147,6 +146,9 @@ create_pr() {
     git push -u origin "$RELEASE_BRANCH"
 
     if command -v gh >/dev/null 2>&1; then
+        # Get authenticated username
+        GH_USER=$(gh auth whoami 2>/dev/null || echo "")
+
         gh pr create \
             --title "release(CapSync): version $VERSION" \
             --body "## Summary
@@ -158,8 +160,9 @@ create_pr() {
 - Run ./scripts/release.sh create_tag $VERSION [--publish-crates]" \
             --head "$RELEASE_BRANCH" \
             --base "master" \
-            --assignee "@me" \
-            --label "release"
+            --assignee "${GH_USER:-@me}" \
+            --label "release" \
+            --milestone "$VERSION"
     else
         echo "Release branch pushed: $RELEASE_BRANCH"
         echo "Open a PR targeting master and include:"
@@ -193,7 +196,7 @@ create_tag() {
 
     echo "Tag v$VERSION created and pushed!"
     echo "The release workflow should start automatically. Monitor progress at:"
-    echo "https://github.com/pixincreate/capsync/actions"
+    echo "https://github.com/pixincreate/CapSync/actions"
 }
 
 delete_tag() {
