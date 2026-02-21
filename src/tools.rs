@@ -62,6 +62,8 @@ static ALL_TOOLS_VEC: LazyLock<Vec<Tool>> = LazyLock::new(|| {
     ]
 });
 
+/// HashMap for O(1) tool lookups by name.
+/// NOTE: Depends on ALL_TOOLS_VEC being initialized first (Rust's LazyLock handles this).
 static TOOLS_BY_NAME: LazyLock<std::collections::HashMap<&'static str, Tool>> =
     LazyLock::new(|| ALL_TOOLS_VEC.iter().map(|t| (t.name, t.clone())).collect());
 

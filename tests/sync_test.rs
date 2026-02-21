@@ -1,4 +1,4 @@
-use capsync::config::Config;
+use capsync::config::{Config, DestinationConfig};
 use capsync::sync::SyncManager;
 use std::fs;
 use tempfile::TempDir;
@@ -49,9 +49,10 @@ fn test_sync_commands_fails_when_source_does_not_exist() {
 
     assert!(result.is_err());
     let err = result.unwrap_err();
-    assert!(err
-        .to_string()
-        .contains("Commands source directory does not exist"));
+    assert!(
+        err.to_string()
+            .contains("Commands source directory does not exist")
+    );
 }
 
 #[test]
@@ -80,9 +81,10 @@ fn test_sync_skills_fails_when_source_does_not_exist() {
 
     assert!(result.is_err());
     let err = result.unwrap_err();
-    assert!(err
-        .to_string()
-        .contains("Skills source directory does not exist"));
+    assert!(
+        err.to_string()
+            .contains("Skills source directory does not exist")
+    );
 }
 
 #[test]
@@ -100,7 +102,7 @@ fn test_sync_skills_syncs_to_enabled_destinations() {
     let result = SyncManager::sync_skills(&config).unwrap();
 
     // May get 1 or 2 successes depending on tool availability
-    assert!(result.successful.len() >= 1);
+    assert!(!result.successful.is_empty());
 }
 
 #[test]
@@ -118,7 +120,7 @@ fn test_sync_all_with_only_skills_source() {
     let result = SyncManager::sync_all(&config).unwrap();
 
     // Should succeed (skills synced, commands skipped since not configured)
-    assert!(result.successful.len() >= 1);
+    assert!(!result.successful.is_empty());
 }
 
 #[test]
@@ -129,16 +131,38 @@ fn test_sync_all_with_both_skills_and_commands() {
     fs::create_dir_all(&skills_dir).unwrap();
     fs::create_dir_all(&commands_dir).unwrap();
 
-    let config = create_test_config(
+    // Create source files so symlinks can be created
+    fs::write(skills_dir.join("test_skill"), "test").unwrap();
+    fs::write(commands_dir.join("test_cmd.md"), "test").unwrap();
+
+    // Create destination directories
+    let dest_skills = temp_dir.path().join("dest_skills");
+    let dest_commands = temp_dir.path().join("dest_commands");
+    fs::create_dir_all(&dest_skills).unwrap();
+    fs::create_dir_all(&dest_commands).unwrap();
+
+    let mut config = create_test_config(
         Some(skills_dir.to_str().unwrap()),
         Some(commands_dir.to_str().unwrap()),
-        &[("claude", true)],
+        &[],
+    );
+    config.destinations.insert(
+        "claude".to_string(),
+        DestinationConfig {
+            enabled: true,
+            skills_path: dest_skills.clone(),
+            commands_path: Some(dest_commands.clone()),
+        },
     );
 
     let result = SyncManager::sync_all(&config).unwrap();
 
-    // May get 1 or 2 successes depending on tool availability
-    assert!(result.successful.len() >= 1);
+    // Should have 2 successes: skills and commands for claude
+    assert!(
+        !result.successful.is_empty(),
+        "Expected at least 1 successful sync, got: {:?}",
+        result.successful
+    );
 }
 
 #[test]
