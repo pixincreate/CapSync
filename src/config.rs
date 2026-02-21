@@ -64,6 +64,7 @@ pub fn load_config() -> Result<Config> {
     let config_path = get_config_path();
     let content = std::fs::read_to_string(config_path)?;
     let config: Config = toml::from_str(&content)?;
+    config.validate()?;
     Ok(config)
 }
 

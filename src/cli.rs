@@ -236,7 +236,6 @@ fn detect_tools() -> Result<()> {
 
 fn sync_all() -> Result<()> {
     let config = config::load_config()?;
-    config.validate()?;
 
     println!("Syncing skills and commands...");
     println!("===========================");
