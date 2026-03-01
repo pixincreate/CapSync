@@ -22,7 +22,7 @@ toml = "1.0"
 dirs = "6.0"
 anyhow = "1.0"
 tempfile = "3.25"
-shellexpand = "3.0"
+shellexpand = "3.1"
 
 [dev-dependencies]
 tempfile = "3.25"
