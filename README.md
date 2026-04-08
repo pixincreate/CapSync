@@ -38,8 +38,8 @@ CapSync solves this by creating a single source of truth for your skills and com
 **Prerequisites:**
 You need to have skills (and optionally commands) already installed in local directories before using CapSync. CapSync assumes you have:
 
-- A directory containing your skills (e.g., `~/Dev/scripts/skills`)
-- Optionally, a directory containing your commands (e.g., `~/Dev/scripts/commands`)
+- A directory containing your skills (e.g., `~/dev/scripts/skills`)
+- Optionally, a directory containing your commands (e.g., `~/dev/scripts/commands`)
 - Skills and commands formatted for your AI tools
 
 If you are looking for a tool to discover and install skills from a registry or repository, that is not what CapSync does. That may be a future feature, but for now, CapSync only syncs skills you already possess.
@@ -190,7 +190,7 @@ CapSync uses directory symlinks (symbolic links) to connect your skills to each 
 
 ### The Setup
 
-1. You designate one directory as your skills source (e.g., `~/Dev/scripts/skills/skills`)
+1. You designate one directory as your skills source (e.g., `~/dev/scripts/skills/skills`)
 2. CapSync creates symlinks from that directory to each tool's expected skills location
 3. Each tool sees your skills as if they were native to that tool
 

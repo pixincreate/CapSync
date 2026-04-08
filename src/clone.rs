@@ -26,16 +26,15 @@ pub fn parse_repo_url(input: &str) -> Result<String> {
     let input = input.trim();
 
     if input.starts_with("http://") || input.starts_with("https://") || input.starts_with("git@") {
-        if input.ends_with(".git") {
-            Ok(input.to_string())
+        let normalized = input.trim_end_matches('/');
+        if normalized.ends_with(".git") {
+            Ok(normalized.to_string())
         } else {
-            Ok(format!("{}.git", input))
+            Ok(format!("{}.git", normalized))
         }
-    } else if input.contains('/') && !input.contains(':') {
-        Ok(format!("https://github.com/{}.git", input))
     } else {
         Err(anyhow!(
-            "Invalid repository: '{}'. Use 'owner/repo' or full URL.",
+            "Invalid repository: '{}'. Must be a valid git URL.",
             input
         ))
     }
@@ -105,24 +104,69 @@ pub fn has_unpushed_changes(path: &Path) -> bool {
         Err(_) => return false,
     };
 
-    if let Ok(status) = repository.statuses(None) {
-        return status.iter().any(|entry| {
-            let status_flag = entry.status();
-            status_flag != git2::Status::INDEX_NEW
-                && status_flag != git2::Status::INDEX_MODIFIED
-                && status_flag != git2::Status::INDEX_DELETED
-                && status_flag != git2::Status::INDEX_RENAMED
-                && status_flag != git2::Status::INDEX_TYPECHANGE
-                && status_flag != git2::Status::WT_NEW
-                && status_flag != git2::Status::WT_MODIFIED
-                && status_flag != git2::Status::WT_DELETED
-                && status_flag != git2::Status::WT_RENAMED
-                && status_flag != git2::Status::WT_TYPECHANGE
-                && status_flag != git2::Status::IGNORED
+    // Check for uncommitted changes (staged or working tree)
+    let mut status_options = git2::StatusOptions::new();
+    status_options
+        .include_untracked(true)
+        .recurse_untracked_dirs(true)
+        .include_ignored(false);
+
+    if let Ok(statuses) = repository.statuses(Some(&mut status_options)) {
+        let has_uncommitted = statuses.iter().any(|entry| {
+            let status = entry.status();
+            status.is_index_new()
+                || status.is_index_modified()
+                || status.is_index_deleted()
+                || status.is_index_renamed()
+                || status.is_index_typechange()
+                || status.is_wt_new()
+                || status.is_wt_modified()
+                || status.is_wt_deleted()
+                || status.is_wt_renamed()
+                || status.is_wt_typechange()
+                || status.is_conflicted()
         });
+
+        if has_uncommitted {
+            return true;
+        }
     }
 
-    false
+    // Check for unpushed commits (ahead of remote)
+    let head = match repository.head() {
+        Ok(h) if h.is_branch() => h,
+        _ => return false,
+    };
+
+    let local_oid = match head.target() {
+        Some(oid) => oid,
+        None => return false,
+    };
+
+    let branch_name = match head.shorthand() {
+        Some(name) => name,
+        None => return false,
+    };
+
+    let local_branch = match repository.find_branch(branch_name, git2::BranchType::Local) {
+        Ok(branch) => branch,
+        Err(_) => return false,
+    };
+
+    let upstream = match local_branch.upstream() {
+        Ok(branch) => branch,
+        Err(_) => return false,
+    };
+
+    let upstream_oid = match upstream.get().target() {
+        Some(oid) => oid,
+        None => return false,
+    };
+
+    match repository.graph_ahead_behind(local_oid, upstream_oid) {
+        Ok((ahead, _)) => ahead > 0,
+        Err(_) => false,
+    }
 }
 
 pub fn backup_existing(source: &Path) -> Result<PathBuf> {
@@ -163,19 +207,29 @@ pub fn clone_to_path(url: &str, branch: &str, target: &Path) -> Result<()> {
 pub fn update_existing(path: &Path) -> Result<()> {
     let repository = Repository::open(path).context("Failed to open existing repository")?;
 
+    if has_unpushed_changes(path) {
+        return Err(anyhow!(
+            "Cannot update: working tree has uncommitted changes. Commit or stash them first."
+        ));
+    }
+
     let mut fetch_options = git2::FetchOptions::new();
     fetch_options.download_tags(git2::AutotagOption::All);
 
     let remotes = repository.remotes().context("Failed to get remotes")?;
 
     for remote_name in remotes.iter().flatten() {
-        if let Ok(mut remote) = repository.find_remote(remote_name) {
-            let _ = remote.fetch(
+        let mut remote = repository
+            .find_remote(remote_name)
+            .with_context(|| format!("Failed to find remote '{}'", remote_name))?;
+
+        remote
+            .fetch(
                 &["+refs/heads/*:refs/remotes/origin/*"],
                 Some(&mut fetch_options),
                 None,
-            );
-        }
+            )
+            .with_context(|| format!("Failed to fetch from remote '{}'", remote_name))?;
     }
 
     let head = repository.head().context("Failed to get HEAD")?;
@@ -184,20 +238,24 @@ pub fn update_existing(path: &Path) -> Result<()> {
         .shorthand()
         .ok_or_else(|| anyhow!("Cannot determine branch name"))?;
 
-    let remote_ref = format!("origin/{}", branch_name);
-
-    if let Ok(reference) = repository.find_reference(&remote_ref) {
-        if let Ok(commit) = reference.peel_to_commit() {
-            let mut checkout_options = git2::build::CheckoutBuilder::new();
-            checkout_options.force();
-            repository
-                .reset(
-                    &commit.into_object(),
-                    git2::ResetType::Hard,
-                    Some(&mut checkout_options),
-                )
-                .context("Failed to reset to latest")?;
+    match repository.find_branch(branch_name, git2::BranchType::Remote) {
+        Ok(branch) => {
+            if let Ok(commit) = branch.get().peel_to_commit() {
+                let mut checkout_options = git2::build::CheckoutBuilder::new();
+                checkout_options.force();
+                repository
+                    .reset(
+                        &commit.into_object(),
+                        git2::ResetType::Hard,
+                        Some(&mut checkout_options),
+                    )
+                    .context("Failed to reset to latest")?;
+            }
         }
+        Err(e) if e.code() == git2::ErrorCode::NotFound => {
+            // No remote tracking branch, skip update
+        }
+        Err(e) => return Err(e).context("Failed to find remote tracking branch"),
     }
 
     Ok(())
@@ -237,7 +295,7 @@ pub fn clone_skills(options: &CloneOptions, config: &Config) -> Result<CloneResu
 
             if is_same_repo {
                 loop {
-                    print!("Update (git pull) or Override (backup + fresh clone)? [U/o]: ");
+                    print!("Update (git pull) or Override (fresh clone)? [U/o]: ");
                     io::stdout().flush()?;
                     let mut input = String::new();
                     io::stdin().read_line(&mut input)?;
@@ -269,6 +327,21 @@ pub fn clone_skills(options: &CloneOptions, config: &Config) -> Result<CloneResu
                     }
                     println!("Please enter y or n.");
                 }
+            }
+        } else {
+            loop {
+                print!("Skills source exists but is not a git repository. Override? [y/N]: ");
+                io::stdout().flush()?;
+                let mut input = String::new();
+                io::stdin().read_line(&mut input)?;
+                let input = input.trim().to_lowercase();
+
+                if input == "y" {
+                    break;
+                } else if input.is_empty() || input == "n" {
+                    return Err(anyhow!("Aborted."));
+                }
+                println!("Please enter y or n.");
             }
         }
 

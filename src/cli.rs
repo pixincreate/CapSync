@@ -3,7 +3,7 @@ use crate::config::{self, Config, DestinationConfig};
 use crate::detect::ToolDetector;
 use crate::sync::SyncManager;
 use crate::tools::{all_tools, get_tool};
-use anyhow::{Result, anyhow};
+use anyhow::{Context, Result, anyhow};
 use clap::{Parser, Subcommand};
 use std::collections::HashMap;
 use std::io::{self, Write};
@@ -330,10 +330,15 @@ fn add_tool(tool_name: &str, no_sync: bool) -> Result<()> {
 fn clone_repo(repo: &str, branch: Option<String>, no_sync: bool) -> Result<()> {
     let config = match config::load_config() {
         Ok(c) => c,
-        Err(_) => {
-            println!("No configuration found. Running init first...");
-            init_config()?;
-            config::load_config()?
+        Err(e) => {
+            let config_path = config::get_config_path();
+            if !config_path.exists() {
+                println!("No configuration found. Running init first...");
+                init_config()?;
+                config::load_config()?
+            } else {
+                return Err(e).context("Failed to load config");
+            }
         }
     };
 
