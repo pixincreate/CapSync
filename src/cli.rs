@@ -1,8 +1,9 @@
+use crate::clone::{clone_skills, CloneAction, CloneOptions};
 use crate::config::{self, Config, DestinationConfig};
 use crate::detect::ToolDetector;
 use crate::sync::SyncManager;
 use crate::tools::{all_tools, get_tool};
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use clap::{Parser, Subcommand};
 use std::collections::HashMap;
 use std::io::{self, Write};
@@ -44,6 +45,17 @@ pub enum Commands {
     },
     /// Check symlink status
     Status,
+    /// Clone a remote skills repository
+    Clone {
+        /// Repository in owner/repo or full URL format
+        repo: String,
+        /// Specific branch to clone (auto-detects if omitted)
+        #[arg(long)]
+        branch: Option<String>,
+        /// Skip syncing after clone
+        #[arg(long)]
+        no_sync: bool,
+    },
 }
 
 pub fn run() -> Result<()> {
@@ -64,6 +76,11 @@ pub fn run() -> Result<()> {
                 Err(anyhow!("Either provide a tool name or use --all flag"))
             }
         }
+        Commands::Clone {
+            repo,
+            branch,
+            no_sync,
+        } => clone_repo(&repo, branch, no_sync),
         Commands::Status => show_status(),
     }
 }
@@ -304,10 +321,52 @@ fn add_tool(tool_name: &str, no_sync: bool) -> Result<()> {
 
     if !no_sync {
         println!("Running sync...");
-        sync_all()
-    } else {
-        Ok(())
+        sync_all()?;
     }
+
+    Ok(())
+}
+
+fn clone_repo(repo: &str, branch: Option<String>, no_sync: bool) -> Result<()> {
+    let config = match config::load_config() {
+        Ok(c) => c,
+        Err(_) => {
+            println!("No configuration found. Running init first...");
+            init_config()?;
+            config::load_config()?
+        }
+    };
+
+    let options = CloneOptions {
+        repo: repo.to_string(),
+        branch,
+    };
+
+    let result = clone_skills(&options, &config)?;
+
+    match result.action {
+        CloneAction::Cloned => {
+            println!("\nSkills cloned successfully!");
+        }
+        CloneAction::Updated => {
+            println!("\nSkills updated successfully!");
+        }
+        CloneAction::Overridden => {
+            if let Some(backup) = result.backup_path {
+                println!("\nExisting skills backed up to: {}", backup.display());
+            }
+            println!("\nSkills cloned successfully!");
+        }
+    }
+
+    if !no_sync {
+        println!("\nRunning sync...");
+        sync_all()?;
+    } else {
+        println!("\nSkipped sync (--no-sync passed). Run 'capsync sync' manually to sync.");
+    }
+
+    Ok(())
 }
 
 fn show_status() -> Result<()> {

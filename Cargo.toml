@@ -23,6 +23,7 @@ dirs = "6.0"
 anyhow = "1.0"
 tempfile = "3.25"
 shellexpand = "3.0"
+git2 = "0.19"
 
 [dev-dependencies]
 tempfile = "3.25"

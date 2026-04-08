@@ -207,7 +207,7 @@ CapSync uses directory symlinks (symbolic links) to connect your skills to each 
 Before CapSync:
 
 ```
-~/Dev/scripts/skills/
+~/dev/scripts/skills/
   ├── my-skill/
   │   └── SKILL.md
 
@@ -223,15 +223,15 @@ Before CapSync:
 After CapSync:
 
 ```
-~/Dev/scripts/skills/
+~/dev/scripts/skills/
   └── my-skill/
       └── SKILL.md       (original)
 
 ~/.config/opencode/skill/
-  └── my-skill -> ~/Dev/scripts/skills/my-skill  (symlink)
+  └── my-skill -> ~/dev/scripts/skills/my-skill  (symlink)
 
 ~/.claude/skills/
-  └── my-skill -> ~/Dev/scripts/skills/my-skill  (symlink)
+  └── my-skill -> ~/dev/scripts/skills/my-skill  (symlink)
 ```
 
 ## Configuration File
@@ -239,8 +239,8 @@ After CapSync:
 CapSync stores its configuration at `~/.config/capsync/config.toml`:
 
 ```toml
-skills_source = "/Users/you/Dev/scripts/skills"
-commands_source = "/Users/you/Dev/scripts/commands"
+skills_source = "/Users/you/dev/scripts/skills"
+commands_source = "/Users/you/dev/scripts/commands"
 
 [destinations.opencode]
 enabled = true
