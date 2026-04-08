@@ -1,5 +1,5 @@
 use crate::config::Config;
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use git2::Repository;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};

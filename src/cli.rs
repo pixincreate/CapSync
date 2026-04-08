@@ -1,9 +1,9 @@
-use crate::clone::{clone_skills, CloneAction, CloneOptions};
+use crate::clone::{CloneAction, CloneOptions, clone_skills};
 use crate::config::{self, Config, DestinationConfig};
 use crate::detect::ToolDetector;
 use crate::sync::SyncManager;
 use crate::tools::{all_tools, get_tool};
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use clap::{Parser, Subcommand};
 use std::collections::HashMap;
 use std::io::{self, Write};
