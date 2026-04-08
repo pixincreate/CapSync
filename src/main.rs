@@ -1,4 +1,5 @@
 mod cli;
+mod clone;
 mod config;
 mod detect;
 mod sync;
