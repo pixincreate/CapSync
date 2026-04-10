@@ -110,7 +110,7 @@ Run `capsync init` to create your configuration. The tool will:
 $ capsync init
 Welcome to CapSync! Let's set up your configuration.
 
-Enter your skills directory: $HOME/Dev/scripts/skills
+Enter your skills directory: $HOME/dev/scripts/skills
 
 Detecting installed tools...
 Detected and enabled: claude, opencode
@@ -124,7 +124,7 @@ If a `commands/` subdirectory is found in your skills directory:
 $ capsync init
 Welcome to CapSync! Let's set up your configuration.
 
-Enter your skills directory: $HOME/Dev/scripts/skills
+Enter your skills directory: $HOME/dev/scripts/skills
 
 Found commands/ subdirectory. Enable commands? [Y/n]: Y
 
@@ -401,7 +401,7 @@ Your commands source can be:
 
 CapSync auto-detects the `commands/` subdirectory during init and prompts to enable command syncing.
 
-## Development
+## development
 
 Build the project:
 
