@@ -347,7 +347,7 @@ capsync clone username/skills-repo --no-sync
 
 ```bash
 # If already cloned a repo, this prompts:
-# "Update (git pull) or Override (backup + fresh clone)?"
+# "Update (git pull) or Override (download new)?"
 capsync clone username/skills-repo
 ```
 
