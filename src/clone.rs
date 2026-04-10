@@ -25,7 +25,6 @@ pub struct CloneOptions {
 pub fn parse_repo_url(input: &str) -> Result<String> {
     let input = input.trim();
 
-    // Handle owner/repo shorthand (e.g., "pixincreate/capsync")
     if !input.contains("://") && !input.starts_with("git@") && input.contains('/') {
         let normalized = format!("https://github.com/{}.git", input.trim_end_matches('/'));
         return Ok(normalized);
@@ -112,7 +111,6 @@ pub fn has_unpushed_changes(path: &Path) -> bool {
         Err(_) => return false,
     };
 
-    // Check for uncommitted changes (staged or working tree)
     let mut status_options = git2::StatusOptions::new();
     status_options
         .include_untracked(true)
@@ -140,7 +138,6 @@ pub fn has_unpushed_changes(path: &Path) -> bool {
         }
     }
 
-    // Check for unpushed commits (ahead of remote)
     let head = match repository.head() {
         Ok(h) if h.is_branch() => h,
         _ => return false,
@@ -243,9 +240,9 @@ pub fn update_existing(path: &Path) -> Result<()> {
         .shorthand()
         .ok_or_else(|| anyhow!("Cannot determine branch name"))?;
 
-    match repository.find_branch(branch_name, git2::BranchType::Remote) {
-        Ok(branch) => {
-            if let Ok(commit) = branch.get().peel_to_commit() {
+    if let Ok(local_branch) = repository.find_branch(branch_name, git2::BranchType::Local) {
+        if let Ok(upstream_branch) = local_branch.upstream() {
+            if let Ok(commit) = upstream_branch.get().peel_to_commit() {
                 let mut checkout_options = git2::build::CheckoutBuilder::new();
                 checkout_options.force();
                 repository
@@ -257,10 +254,6 @@ pub fn update_existing(path: &Path) -> Result<()> {
                     .context("Failed to reset to latest")?;
             }
         }
-        Err(e) if e.code() == git2::ErrorCode::NotFound => {
-            // No remote tracking branch, skip update
-        }
-        Err(e) => return Err(e).context("Failed to find remote tracking branch"),
     }
 
     Ok(())
