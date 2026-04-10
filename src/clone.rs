@@ -296,7 +296,7 @@ pub fn clone_skills(options: &CloneOptions, config: &Config) -> Result<CloneResu
 
             if is_same_repo {
                 loop {
-                    print!("Update (git pull) or Override (fresh clone)? [U/o]: ");
+                    print!("Update (git pull) or Override (download new)? [U/o]: ");
                     io::stdout().flush()?;
                     let mut input = String::new();
                     io::stdin().read_line(&mut input)?;
