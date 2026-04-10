@@ -25,6 +25,12 @@ pub struct CloneOptions {
 pub fn parse_repo_url(input: &str) -> Result<String> {
     let input = input.trim();
 
+    // Handle owner/repo shorthand (e.g., "pixincreate/capsync")
+    if !input.contains("://") && !input.starts_with("git@") && input.contains('/') {
+        let normalized = format!("https://github.com/{}.git", input.trim_end_matches('/'));
+        return Ok(normalized);
+    }
+
     if input.starts_with("http://") || input.starts_with("https://") || input.starts_with("git@") {
         let normalized = input.trim_end_matches('/');
         if normalized.ends_with(".git") {
@@ -53,12 +59,11 @@ pub fn get_remote_default_branch(url: &str) -> Result<String> {
         .remote_anonymous(url)
         .context("Failed to create remote")?;
 
+    let remote_name = remote.name().unwrap_or("origin");
+    let refspec = format!("+refs/heads/*:refs/remotes/{}/", remote_name);
+
     remote
-        .fetch(
-            &["+refs/heads/*:refs/remotes/origin/*"],
-            Some(&mut fetch_options),
-            None,
-        )
+        .fetch(&[&refspec], Some(&mut fetch_options), None)
         .context("Failed to fetch from remote")?;
 
     let default_branch = find_default_branch(&repository)?;
@@ -75,6 +80,9 @@ fn find_default_branch(repository: &Repository) -> Result<String> {
         let (branch, _) = branch_result.context("Failed to iterate branches")?;
         let name_result = branch.name().context("Failed to get branch name")?;
         if let Some(branch_name) = name_result {
+            if branch_name.ends_with("/HEAD") {
+                continue;
+            }
             let is_main = branch_name == "origin/main";
             let is_master = branch_name == "origin/master";
             let is_preferred = is_main || is_master;
@@ -209,7 +217,7 @@ pub fn update_existing(path: &Path) -> Result<()> {
 
     if has_unpushed_changes(path) {
         return Err(anyhow!(
-            "Cannot update: working tree has uncommitted changes. Commit or stash them first."
+            "Cannot update: working tree has uncommitted or unpushed changes. Commit or stash them first."
         ));
     }
 
@@ -223,12 +231,9 @@ pub fn update_existing(path: &Path) -> Result<()> {
             .find_remote(remote_name)
             .with_context(|| format!("Failed to find remote '{}'", remote_name))?;
 
+        let refspec = format!("+refs/heads/*:refs/remotes/{}/", remote_name);
         remote
-            .fetch(
-                &["+refs/heads/*:refs/remotes/origin/*"],
-                Some(&mut fetch_options),
-                None,
-            )
+            .fetch(&[&refspec], Some(&mut fetch_options), None)
             .with_context(|| format!("Failed to fetch from remote '{}'", remote_name))?;
     }
 
@@ -261,10 +266,13 @@ pub fn update_existing(path: &Path) -> Result<()> {
     Ok(())
 }
 
-pub fn get_remote_url(path: &Path) -> Option<String> {
-    let repository = Repository::open(path).ok()?;
-    let remote = repository.find_remote("origin").ok()?;
-    remote.url().map(|url_string| url_string.to_string())
+pub fn get_remote_url(path: &Path) -> Result<Option<String>> {
+    let repository = Repository::open(path).context("Failed to open repository")?;
+    match repository.find_remote("origin") {
+        Ok(remote) => Ok(remote.url().map(|url_string| url_string.to_string())),
+        Err(e) if e.code() == git2::ErrorCode::NotFound => Ok(None),
+        Err(e) => Err(e).context("Failed to find origin remote"),
+    }
 }
 
 pub fn clone_skills(options: &CloneOptions, config: &Config) -> Result<CloneResult> {
@@ -283,7 +291,7 @@ pub fn clone_skills(options: &CloneOptions, config: &Config) -> Result<CloneResu
     println!("Using branch: {}", branch);
 
     let (action, backup_path) = if source_exists {
-        let current_remote = get_remote_url(source);
+        let current_remote = get_remote_url(source).ok().flatten();
 
         if current_remote.is_some() {
             println!("\nSkills source already exists.");

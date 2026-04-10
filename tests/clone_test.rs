@@ -56,3 +56,15 @@ fn test_parse_invalid_url() {
     let result2 = parse_repo_url("");
     assert!(result2.is_err());
 }
+
+#[test]
+fn test_parse_owner_repo_shorthand() {
+    let result = parse_repo_url("pixincreate/capsync").unwrap();
+    assert_eq!(result, "https://github.com/pixincreate/capsync.git");
+
+    let result2 = parse_repo_url("pixincreate/capsync/").unwrap();
+    assert_eq!(result2, "https://github.com/pixincreate/capsync.git");
+
+    let result3 = parse_repo_url(" owner/repo ").unwrap();
+    assert_eq!(result3, "https://github.com/owner/repo.git");
+}
