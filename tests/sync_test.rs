@@ -91,40 +91,44 @@ fn test_sync_skills_fails_when_source_does_not_exist() {
 fn test_sync_skills_syncs_to_enabled_destinations() {
     let temp_dir = TempDir::new().unwrap();
     let skills_dir = temp_dir.path().join("skills");
+    let claude_dest = temp_dir.path().join("claude-skills");
+    let opencode_dest = temp_dir.path().join("opencode-skills");
     fs::create_dir_all(&skills_dir).unwrap();
 
-    let config = create_test_config(
+    let mut config = create_test_config(
         Some(skills_dir.to_str().unwrap()),
         None,
         &[("claude", true), ("opencode", true)],
     );
+    config.destinations.get_mut("claude").unwrap().skills_path = claude_dest;
+    config.destinations.get_mut("opencode").unwrap().skills_path = opencode_dest;
 
     let result = SyncManager::sync_skills(&config).unwrap();
 
-    // May get 1 or 2 successes depending on tool availability
-    assert!(!result.successful.is_empty());
+    assert_eq!(result.successful.len(), 2);
 }
 
 #[test]
 fn test_sync_all_with_only_skills_source() {
     let temp_dir = TempDir::new().unwrap();
     let skills_dir = temp_dir.path().join("skills");
+    let claude_dest = temp_dir.path().join("claude-skills");
     fs::create_dir_all(&skills_dir).unwrap();
 
     // Create a test skill directory to sync
     let test_skill = skills_dir.join("test-skill");
     fs::create_dir_all(&test_skill).unwrap();
 
-    let config = create_test_config(
+    let mut config = create_test_config(
         Some(skills_dir.to_str().unwrap()),
         None,
         &[("claude", true)],
     );
+    config.destinations.get_mut("claude").unwrap().skills_path = claude_dest;
 
     let result = SyncManager::sync_all(&config).unwrap();
 
-    // Should succeed (skills synced, commands skipped since not configured)
-    assert!(!result.successful.is_empty());
+    assert_eq!(result.successful.len(), 1);
 }
 
 #[test]
