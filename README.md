@@ -99,7 +99,7 @@ cargo install --path .
 
 Run `capsync init` to create your configuration. The tool will:
 
-1. Ask for your skills directory path (supports `$HOME`, `~`, and other shell variables)
+1. Ask for your skills source directory path (supports `$HOME`, `~`, and other shell variables)
 2. Automatically detect if a `commands/` subdirectory exists in your skills directory
 3. Prompt to enable commands if found
 4. Scan your system for installed AI coding tools
@@ -110,7 +110,7 @@ Run `capsync init` to create your configuration. The tool will:
 $ capsync init
 Welcome to CapSync! Let's set up your configuration.
 
-Enter your skills directory: $HOME/dev/scripts/skills
+Enter your skills source directory: $HOME/dev/scripts/skills
 
 Detecting installed tools...
 Detected and enabled: claude, opencode
@@ -124,9 +124,10 @@ If a `commands/` subdirectory is found in your skills directory:
 $ capsync init
 Welcome to CapSync! Let's set up your configuration.
 
-Enter your skills directory: $HOME/dev/scripts/skills
+Enter your skills source directory: $HOME/dev/scripts/skills
 
-Found commands/ subdirectory. Enable commands? [Y/n]: Y
+Found commands/ subdirectory in skills source.
+Enable commands? [Y/n]: Y
 
 Detecting installed tools...
 Detected and enabled: claude, opencode
@@ -419,7 +420,7 @@ Your commands source can be:
 
 CapSync auto-detects the `commands/` subdirectory during init and prompts to enable command syncing.
 
-## development
+## Development
 
 Build the project:
 

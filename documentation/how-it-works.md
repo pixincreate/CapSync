@@ -98,7 +98,7 @@ Interactive setup. Asks where your skills live. Detects what tools you have. Cre
 $ capsync init
 Welcome to CapSync! Let's set up your configuration.
 
-Enter your skills directory: $HOME/my-skills
+Enter your skills source directory: $HOME/my-skills
 
 Detecting installed tools...
 Detected and enabled: claude, opencode
