@@ -72,4 +72,51 @@ fn test_common_tools_exist() {
     assert!(names.contains(&"cursor"));
     assert!(names.contains(&"amp"));
     assert!(names.contains(&"antigravity"));
+    assert!(names.contains(&"github-copilot"));
+    assert!(names.contains(&"replit"));
+    assert!(names.contains(&"pochi"));
+    assert!(names.contains(&"neovate"));
+}
+
+#[test]
+fn test_supported_list_paths_match_registry() {
+    let amp = get_tool("amp").unwrap();
+    assert!(amp.config_path.ends_with(".config/agents"));
+    assert!(amp.skills_path.ends_with(".config/agents/skills"));
+
+    let kimi_cli = get_tool("kimi-cli").unwrap();
+    assert!(kimi_cli.config_path.ends_with(".config/agents"));
+    assert!(kimi_cli.skills_path.ends_with(".config/agents/skills"));
+
+    let replit = get_tool("replit").unwrap();
+    assert!(replit.config_path.ends_with(".config/agents"));
+    assert!(replit.skills_path.ends_with(".config/agents/skills"));
+
+    let antigravity = get_tool("antigravity").unwrap();
+    assert!(antigravity.config_path.ends_with(".gemini/antigravity"));
+    assert!(
+        antigravity
+            .skills_path
+            .ends_with(".gemini/antigravity/skills")
+    );
+
+    let github_copilot = get_tool("github-copilot").unwrap();
+    assert!(github_copilot.config_path.ends_with(".copilot"));
+    assert!(github_copilot.skills_path.ends_with(".copilot/skills"));
+
+    let openclaw = get_tool("openclaw").unwrap();
+    assert!(openclaw.config_path.ends_with(".moltbot"));
+    assert!(openclaw.skills_path.ends_with(".moltbot/skills"));
+
+    let pi = get_tool("pi").unwrap();
+    assert!(pi.config_path.ends_with(".pi/agent"));
+    assert!(pi.skills_path.ends_with(".pi/agent/skills"));
+
+    let trae_cn = get_tool("trae-cn").unwrap();
+    assert!(trae_cn.config_path.ends_with(".trae-cn"));
+    assert!(trae_cn.skills_path.ends_with(".trae-cn/skills"));
+
+    let windsurf = get_tool("windsurf").unwrap();
+    assert!(windsurf.config_path.ends_with(".codeium/windsurf"));
+    assert!(windsurf.skills_path.ends_with(".codeium/windsurf/skills"));
 }
