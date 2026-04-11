@@ -46,7 +46,7 @@ A target tool's skills/commands location. Each destination has:
 A symbolic link. CapSync doesn't copy files—it creates symlinks from destination directories pointing to your source directory.
 
 ### Clone
-The `clone` command fetches a remote GitHub repository into your skills source, enabling CapSync to sync remote skills to local tools.
+The `clone` command fetches a remote Git repository into your skills source, enabling CapSync to sync remote skills to local tools.
 
 ---
 
@@ -136,7 +136,7 @@ Shows:
 
 ### `capsync clone <repo>`
 
-Clone a remote GitHub repository into your skills source.
+Clone a remote Git repository into your skills source.
 
 ```bash
 capsync clone <repo>                 # Clone (auto-detect branch)
@@ -151,11 +151,14 @@ capsync clone <repo> --no-sync       # Clone without syncing
 - If `skills_source` doesn't exist: Clone directly
 - If `skills_source` exists (same repo): Prompt to update or override
 - If `skills_source` exists (different repo): Prompt to override
-- If local has unpushed changes: Warn and offer to backup
+- If `skills_source` exists but is not a git repository: Prompt before overriding
+- If `skills_source` is a git repository without an `origin` remote: Prompt before overriding
+- If override would discard local changes: Warn and offer to back up first
+- If update is selected while the current branch differs from `--branch`: Re-clone the requested branch instead of updating in place
 
 **Branch Detection:**
-- Auto-detects default branch from remote
-- Prefers `main`, falls back to `master`, then alphabetical
+- Auto-detects the remote's default branch from remote HEAD
+- Falls back to fetched branch names only if the remote does not report a default branch
 
 ---
 
@@ -298,7 +301,8 @@ After (with CapSync):
 3. Handle existing source:
    - Same repo → offer update (git pull) or override
    - Different repo → offer override
-   - Local changes → warn and offer backup
+   - Non-git directory or no `origin` remote → require explicit confirmation before override
+   - Local changes during override → warn and offer backup
 4. Clone to `skills_source`
 5. Optionally sync to all enabled tools
 

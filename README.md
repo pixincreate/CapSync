@@ -31,7 +31,7 @@ CapSync solves this by creating a single source of truth for your skills and com
 
 **What CapSync Is Not:**
 
-- A skill or command discovery tool. CapSync does not find or download skills/commands from the internet
+- A skill or command discovery tool. CapSync does not search registries or catalogs for skills/commands on your behalf
 - A skill or command installer. You must already have skills/commands in your source directories
 - A skill or command creator. CapSync only syncs what you already have
 
@@ -42,7 +42,7 @@ You need to have skills (and optionally commands) already installed in local dir
 - Optionally, a directory containing your commands (e.g., `~/dev/scripts/commands`)
 - Skills and commands formatted for your AI tools
 
-If you are looking for a tool to discover and install skills from a registry or repository, that is not what CapSync does. That may be a future feature, but for now, CapSync only syncs skills you already possess.
+If you already know which Git repository you want, `capsync clone` can download it into your configured skills source. CapSync still does not browse, rank, or discover skills for you.
 
 ## Installation
 
@@ -307,6 +307,24 @@ Scan system for installed AI coding tools without modifying config.
 ### `capsync sync`
 
 Create or update symlinks for all enabled tools.
+
+### `capsync clone <repo>`
+
+Clone a remote Git repository into your configured skills source.
+
+Supported inputs:
+
+- `owner/repo`
+- `https://...`
+- `http://...`
+- `git@...`
+
+Options:
+
+- `--branch <name>`: Clone a specific branch instead of auto-detecting the remote default branch
+- `--no-sync`: Skip running `capsync sync` after the clone finishes
+
+If the skills source already exists, CapSync prompts before replacing it. During override, it offers a backup when local changes would otherwise be lost.
 
 ### `capsync add <tool>`
 
