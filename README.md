@@ -31,18 +31,18 @@ CapSync solves this by creating a single source of truth for your skills and com
 
 **What CapSync Is Not:**
 
-- A skill or command discovery tool. CapSync does not find or download skills/commands from the internet
+- A skill or command discovery tool. CapSync does not search registries or catalogs for skills/commands on your behalf
 - A skill or command installer. You must already have skills/commands in your source directories
 - A skill or command creator. CapSync only syncs what you already have
 
 **Prerequisites:**
 You need to have skills (and optionally commands) already installed in local directories before using CapSync. CapSync assumes you have:
 
-- A directory containing your skills (e.g., `~/Dev/scripts/skills`)
-- Optionally, a directory containing your commands (e.g., `~/Dev/scripts/commands`)
+- A directory containing your skills (e.g., `~/dev/scripts/skills`)
+- Optionally, a directory containing your commands (e.g., `~/dev/scripts/commands`)
 - Skills and commands formatted for your AI tools
 
-If you are looking for a tool to discover and install skills from a registry or repository, that is not what CapSync does. That may be a future feature, but for now, CapSync only syncs skills you already possess.
+If you already know which Git repository you want, `capsync clone` can download it into your configured skills source. CapSync still does not browse, rank, or discover skills for you.
 
 ## Installation
 
@@ -99,7 +99,7 @@ cargo install --path .
 
 Run `capsync init` to create your configuration. The tool will:
 
-1. Ask for your skills directory path (supports `$HOME`, `~`, and other shell variables)
+1. Ask for your skills source directory path (supports `$HOME`, `~`, and other shell variables)
 2. Automatically detect if a `commands/` subdirectory exists in your skills directory
 3. Prompt to enable commands if found
 4. Scan your system for installed AI coding tools
@@ -110,7 +110,7 @@ Run `capsync init` to create your configuration. The tool will:
 $ capsync init
 Welcome to CapSync! Let's set up your configuration.
 
-Enter your skills directory: $HOME/Dev/scripts/skills
+Enter your skills source directory: $HOME/dev/scripts/skills
 
 Detecting installed tools...
 Detected and enabled: claude, opencode
@@ -124,9 +124,10 @@ If a `commands/` subdirectory is found in your skills directory:
 $ capsync init
 Welcome to CapSync! Let's set up your configuration.
 
-Enter your skills directory: $HOME/Dev/scripts/skills
+Enter your skills source directory: $HOME/dev/scripts/skills
 
-Found commands/ subdirectory. Enable commands? [Y/n]: Y
+Found commands/ subdirectory in skills source.
+Enable commands? [Y/n]: Y
 
 Detecting installed tools...
 Detected and enabled: claude, opencode
@@ -190,7 +191,7 @@ CapSync uses directory symlinks (symbolic links) to connect your skills to each 
 
 ### The Setup
 
-1. You designate one directory as your skills source (e.g., `~/Dev/scripts/skills/skills`)
+1. You designate one directory as your skills source (e.g., `~/dev/scripts/skills/skills`)
 2. CapSync creates symlinks from that directory to each tool's expected skills location
 3. Each tool sees your skills as if they were native to that tool
 
@@ -207,7 +208,7 @@ CapSync uses directory symlinks (symbolic links) to connect your skills to each 
 Before CapSync:
 
 ```
-~/Dev/scripts/skills/
+~/dev/scripts/skills/
   ├── my-skill/
   │   └── SKILL.md
 
@@ -223,15 +224,15 @@ Before CapSync:
 After CapSync:
 
 ```
-~/Dev/scripts/skills/
+~/dev/scripts/skills/
   └── my-skill/
       └── SKILL.md       (original)
 
 ~/.config/opencode/skill/
-  └── my-skill -> ~/Dev/scripts/skills/my-skill  (symlink)
+  └── my-skill -> ~/dev/scripts/skills/my-skill  (symlink)
 
 ~/.claude/skills/
-  └── my-skill -> ~/Dev/scripts/skills/my-skill  (symlink)
+  └── my-skill -> ~/dev/scripts/skills/my-skill  (symlink)
 ```
 
 ## Configuration File
@@ -239,8 +240,8 @@ After CapSync:
 CapSync stores its configuration at `~/.config/capsync/config.toml`:
 
 ```toml
-skills_source = "/Users/you/Dev/scripts/skills"
-commands_source = "/Users/you/Dev/scripts/commands"
+skills_source = "/Users/you/dev/scripts/skills"
+commands_source = "/Users/you/dev/scripts/commands"
 
 [destinations.opencode]
 enabled = true
@@ -307,6 +308,24 @@ Scan system for installed AI coding tools without modifying config.
 ### `capsync sync`
 
 Create or update symlinks for all enabled tools.
+
+### `capsync clone <repo>`
+
+Clone a remote Git repository into your configured skills source.
+
+Supported inputs:
+
+- `owner/repo`
+- `https://...`
+- `http://...`
+- `git@...`
+
+Options:
+
+- `--branch <name>`: Clone a specific branch instead of auto-detecting the remote default branch
+- `--no-sync`: Skip running `capsync sync` after the clone finishes
+
+If the skills source already exists, CapSync prompts before replacing it. During override, it offers a backup when local changes would otherwise be lost.
 
 ### `capsync add <tool>`
 
