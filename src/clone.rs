@@ -25,9 +25,12 @@ pub struct CloneOptions {
 pub fn parse_repo_url(input: &str) -> Result<String> {
     let input = input.trim();
 
-    if !input.contains("://") && !input.starts_with("git@") && input.contains('/') {
-        let normalized = format!("https://github.com/{}.git", input.trim_end_matches('/'));
-        return Ok(normalized);
+    if !input.contains("://") && !input.starts_with("git@") {
+        let shorthand = input.trim_end_matches('/');
+        let parts: Vec<&str> = shorthand.split('/').collect();
+        if parts.len() == 2 && parts.iter().all(|part| !part.is_empty()) {
+            return Ok(format!("https://github.com/{}.git", shorthand));
+        }
     }
 
     if input.starts_with("http://") || input.starts_with("https://") || input.starts_with("git@") {
@@ -39,7 +42,7 @@ pub fn parse_repo_url(input: &str) -> Result<String> {
         }
     } else {
         Err(anyhow!(
-            "Invalid repository: '{}'. Must be a valid git URL.",
+            "Invalid repository: '{}'. Must be a valid git URL or owner/repo.",
             input
         ))
     }
@@ -48,9 +51,6 @@ pub fn parse_repo_url(input: &str) -> Result<String> {
 pub fn get_remote_default_branch(url: &str) -> Result<String> {
     let temp_dir = tempfile::tempdir().context("Failed to create temporary directory")?;
 
-    let mut fetch_options = git2::FetchOptions::new();
-    fetch_options.download_tags(git2::AutotagOption::All);
-
     let repository =
         Repository::init(temp_dir.path()).context("Failed to initialize temp repository")?;
 
@@ -58,8 +58,31 @@ pub fn get_remote_default_branch(url: &str) -> Result<String> {
         .remote_anonymous(url)
         .context("Failed to create remote")?;
 
+    remote
+        .connect(git2::Direction::Fetch)
+        .context("Failed to connect to remote")?;
+
+    if let Ok(default_branch) = remote.default_branch() {
+        remote.disconnect().context("Failed to disconnect remote")?;
+
+        let branch_name = default_branch
+            .as_str()
+            .context("Failed to read default branch name")?
+            .trim_start_matches("refs/heads/")
+            .to_string();
+
+        if !branch_name.is_empty() {
+            return Ok(branch_name);
+        }
+    } else {
+        remote.disconnect().context("Failed to disconnect remote")?;
+    }
+
+    let mut fetch_options = git2::FetchOptions::new();
+    fetch_options.download_tags(git2::AutotagOption::All);
+
     let remote_name = remote.name().unwrap_or("origin");
-    let refspec = format!("+refs/heads/*:refs/remotes/{}/", remote_name);
+    let refspec = format!("+refs/heads/*:refs/remotes/{}/*", remote_name);
 
     remote
         .fetch(&[&refspec], Some(&mut fetch_options), None)
@@ -228,7 +251,7 @@ pub fn update_existing(path: &Path) -> Result<()> {
             .find_remote(remote_name)
             .with_context(|| format!("Failed to find remote '{}'", remote_name))?;
 
-        let refspec = format!("+refs/heads/*:refs/remotes/{}/", remote_name);
+        let refspec = format!("+refs/heads/*:refs/remotes/{}/*", remote_name);
         remote
             .fetch(&[&refspec], Some(&mut fetch_options), None)
             .with_context(|| format!("Failed to fetch from remote '{}'", remote_name))?;
@@ -268,54 +291,94 @@ pub fn get_remote_url(path: &Path) -> Result<Option<String>> {
     }
 }
 
+fn open_repository(path: &Path) -> Result<Option<Repository>> {
+    match Repository::open(path) {
+        Ok(repository) => Ok(Some(repository)),
+        Err(e) if e.code() == git2::ErrorCode::NotFound => Ok(None),
+        Err(e) => Err(e).context("Failed to open repository"),
+    }
+}
+
+fn current_branch_name(repository: &Repository) -> Result<String> {
+    repository
+        .head()
+        .context("Failed to get HEAD")?
+        .shorthand()
+        .ok_or_else(|| anyhow!("Cannot determine branch name"))
+        .map(str::to_string)
+}
+
 pub fn clone_skills(options: &CloneOptions, config: &Config) -> Result<CloneResult> {
     let url = parse_repo_url(&options.repo)?;
 
     let source = &config.skills_source;
     let source_exists = source.exists();
 
-    let branch = if let Some(branch_name) = &options.branch {
+    let requested_branch = if let Some(branch_name) = &options.branch {
         branch_name.clone()
     } else {
         println!("Fetching remote branch info...");
         get_remote_default_branch(&url)?
     };
 
-    println!("Using branch: {}", branch);
+    println!("Using branch: {}", requested_branch);
 
     let (action, backup_path) = if source_exists {
-        let current_remote = get_remote_url(source).ok().flatten();
+        let repository = open_repository(source)?;
 
-        if current_remote.is_some() {
+        if repository.is_some() {
+            let current_remote = get_remote_url(source)?;
             println!("\nSkills source already exists.");
 
-            let is_same_repo = current_remote
-                .as_ref()
-                .map(|remote_url| remote_url.contains(&options.repo) || url.contains(remote_url))
-                .unwrap_or(false);
+            if let Some(remote_url) = current_remote.as_ref() {
+                let is_same_repo = remote_url.contains(&options.repo) || url.contains(remote_url);
 
-            if is_same_repo {
-                loop {
-                    print!("Update (git pull) or Override (download new)? [U/o]: ");
-                    io::stdout().flush()?;
-                    let mut input = String::new();
-                    io::stdin().read_line(&mut input)?;
-                    let input = input.trim().to_lowercase();
+                if is_same_repo {
+                    loop {
+                        print!("Update (git pull) or Override (download new)? [U/o]: ");
+                        io::stdout().flush()?;
+                        let mut input = String::new();
+                        io::stdin().read_line(&mut input)?;
+                        let input = input.trim().to_lowercase();
 
-                    if input.is_empty() || input == "u" {
-                        update_existing(source)?;
-                        return Ok(CloneResult {
-                            action: CloneAction::Updated,
-                            backup_path: None,
-                        });
-                    } else if input == "o" {
-                        break;
+                        if input.is_empty() || input == "u" {
+                            let existing_repository = Repository::open(source)
+                                .context("Failed to open existing repository")?;
+                            let current_branch = current_branch_name(&existing_repository)?;
+
+                            if current_branch != requested_branch {
+                                break;
+                            }
+
+                            update_existing(source)?;
+                            return Ok(CloneResult {
+                                action: CloneAction::Updated,
+                                backup_path: None,
+                            });
+                        } else if input == "o" {
+                            break;
+                        }
+                        println!("Please enter U or o.");
                     }
-                    println!("Please enter U or o.");
+                } else {
+                    loop {
+                        print!("Override with different repository? [y/N]: ");
+                        io::stdout().flush()?;
+                        let mut input = String::new();
+                        io::stdin().read_line(&mut input)?;
+                        let input = input.trim().to_lowercase();
+
+                        if input == "y" {
+                            break;
+                        } else if input.is_empty() || input == "n" {
+                            return Err(anyhow!("Aborted."));
+                        }
+                        println!("Please enter y or n.");
+                    }
                 }
             } else {
                 loop {
-                    print!("Override with different repository? [y/N]: ");
+                    print!("Skills source exists but has no origin remote. Override? [y/N]: ");
                     io::stdout().flush()?;
                     let mut input = String::new();
                     io::stdin().read_line(&mut input)?;
@@ -375,9 +438,12 @@ pub fn clone_skills(options: &CloneOptions, config: &Config) -> Result<CloneResu
     };
 
     println!("Cloning into {}...", source.display());
-    clone_to_path(&url, &branch, source)?;
+    clone_to_path(&url, &requested_branch, source)?;
 
-    println!("Successfully cloned {} (branch: {})", options.repo, branch);
+    println!(
+        "Successfully cloned {} (branch: {})",
+        options.repo, requested_branch
+    );
 
     Ok(CloneResult {
         action,
