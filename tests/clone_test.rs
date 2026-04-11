@@ -1,4 +1,6 @@
-use capsync::clone::{get_remote_default_branch, get_remote_url, parse_repo_url};
+use capsync::clone::{
+    get_remote_default_branch, get_remote_url, normalize_repo_identity, parse_repo_url,
+};
 use git2::{Repository, Signature};
 use std::fs;
 use tempfile::tempdir;
@@ -90,6 +92,32 @@ fn test_parse_owner_repo_shorthand() {
 
     let result3 = parse_repo_url(" owner/repo ").unwrap();
     assert_eq!(result3, "https://github.com/owner/repo.git");
+
+    let result4 = parse_repo_url("owner/repo.git").unwrap();
+    assert_eq!(result4, "https://github.com/owner/repo.git");
+}
+
+#[test]
+fn test_normalize_repo_identity_matches_same_repo_across_url_formats() {
+    let https_identity = normalize_repo_identity("https://github.com/pixincreate/CapSync.git");
+    let ssh_identity = normalize_repo_identity("git@github.com:pixincreate/CapSync.git");
+    let shorthand_identity = normalize_repo_identity("pixincreate/CapSync");
+    let ssh_url_identity = normalize_repo_identity("ssh://git@github.com/pixincreate/CapSync");
+
+    assert_eq!(
+        https_identity,
+        Some("github.com/pixincreate/CapSync".to_string())
+    );
+    assert_eq!(https_identity, ssh_identity);
+    assert_eq!(https_identity, shorthand_identity);
+    assert_eq!(https_identity, ssh_url_identity);
+}
+
+#[test]
+fn test_normalize_repo_identity_rejects_invalid_paths() {
+    assert_eq!(normalize_repo_identity(""), None);
+    assert_eq!(normalize_repo_identity("owner/repo/extra"), None);
+    assert_eq!(normalize_repo_identity("https://github.com/owner"), None);
 }
 
 #[test]

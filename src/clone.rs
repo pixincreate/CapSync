@@ -22,11 +22,56 @@ pub struct CloneOptions {
     pub branch: Option<String>,
 }
 
+pub fn normalize_repo_identity(input: &str) -> Option<String> {
+    let normalized_input = input.trim().trim_end_matches('/').trim_end_matches(".git");
+
+    if normalized_input.is_empty() {
+        return None;
+    }
+
+    if !normalized_input.contains("://") && !normalized_input.starts_with("git@") {
+        return normalize_repo_identity_parts("github.com", normalized_input);
+    }
+
+    if let Some(ssh_target) = normalized_input.strip_prefix("git@") {
+        let (host, path) = ssh_target.split_once(':')?;
+        return normalize_repo_identity_parts(host, path);
+    }
+
+    let (_, remainder) = normalized_input.split_once("://")?;
+    let (authority, path) = remainder.split_once('/')?;
+    let host = authority.rsplit('@').next()?.split(':').next()?;
+
+    normalize_repo_identity_parts(host, path)
+}
+
+fn normalize_repo_identity_parts(host: &str, path: &str) -> Option<String> {
+    let normalized_path = path.trim_start_matches('/');
+    let mut segments = normalized_path.split('/');
+    let owner = segments.next()?;
+    let repository_name = segments.next()?;
+
+    if segments.next().is_some()
+        || host.is_empty()
+        || owner.is_empty()
+        || repository_name.is_empty()
+    {
+        return None;
+    }
+
+    Some(format!(
+        "{}/{}/{}",
+        host.to_lowercase(),
+        owner,
+        repository_name
+    ))
+}
+
 pub fn parse_repo_url(input: &str) -> Result<String> {
     let input = input.trim();
 
     if !input.contains("://") && !input.starts_with("git@") {
-        let shorthand = input.trim_end_matches('/');
+        let shorthand = input.trim_end_matches('/').trim_end_matches(".git");
         let parts: Vec<&str> = shorthand.split('/').collect();
         if parts.len() == 2 && parts.iter().all(|part| !part.is_empty()) {
             return Ok(format!("https://github.com/{}.git", shorthand));
@@ -331,7 +376,13 @@ pub fn clone_skills(options: &CloneOptions, config: &Config) -> Result<CloneResu
             println!("\nSkills source already exists.");
 
             if let Some(remote_url) = current_remote.as_ref() {
-                let is_same_repo = remote_url.contains(&options.repo) || url.contains(remote_url);
+                let is_same_repo = match (
+                    normalize_repo_identity(remote_url),
+                    normalize_repo_identity(&url),
+                ) {
+                    (Some(current_repo), Some(requested_repo)) => current_repo == requested_repo,
+                    _ => remote_url == &url,
+                };
 
                 if is_same_repo {
                     loop {
@@ -347,6 +398,28 @@ pub fn clone_skills(options: &CloneOptions, config: &Config) -> Result<CloneResu
                             let current_branch = current_branch_name(&existing_repository)?;
 
                             if current_branch != requested_branch {
+                                println!(
+                                    "\nRequested branch '{}' differs from current local branch '{}'.",
+                                    requested_branch, current_branch
+                                );
+
+                                loop {
+                                    print!(
+                                        "Re-clone the requested branch instead of updating in place? [y/N]: "
+                                    );
+                                    io::stdout().flush()?;
+                                    let mut branch_input = String::new();
+                                    io::stdin().read_line(&mut branch_input)?;
+                                    let branch_input = branch_input.trim().to_lowercase();
+
+                                    if branch_input == "y" {
+                                        break;
+                                    } else if branch_input.is_empty() || branch_input == "n" {
+                                        return Err(anyhow!("Aborted."));
+                                    }
+                                    println!("Please enter y or n.");
+                                }
+
                                 break;
                             }
 
