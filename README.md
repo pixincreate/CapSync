@@ -31,9 +31,9 @@ CapSync solves this by creating a single source of truth for your skills and com
 
 **What CapSync Is Not:**
 
-- A skill or command discovery tool. CapSync does not search registries or catalogs for skills/commands on your behalf
-- A skill or command installer. You must already have skills/commands in your source directories
-- A skill or command creator. CapSync only syncs what you already have
+- A registry browser or catalog search tool. CapSync does not rank, search, or recommend skills for you
+- A general-purpose package manager for commands. Commands still need to come from your own source directory
+- A skill or command creator. CapSync only syncs and installs content you explicitly point it at
 
 **Prerequisites:**
 You need to have skills (and optionally commands) already installed in local directories before using CapSync. CapSync assumes you have:
@@ -42,7 +42,7 @@ You need to have skills (and optionally commands) already installed in local dir
 - Optionally, a directory containing your commands (e.g., `~/dev/scripts/commands`)
 - Skills and commands formatted for your AI tools
 
-If you already know which Git repository you want, `capsync clone` can download it into your configured skills source. CapSync still does not browse, rank, or discover skills for you.
+If you already know which Git repository or skill reference you want, `capsync clone` and `capsync install` can materialize it into your configured skills source. CapSync still does not browse, rank, or discover skills for you.
 
 ## Installation
 
@@ -311,7 +311,7 @@ Create or update symlinks for all enabled tools.
 
 ### `capsync clone <repo>`
 
-Clone a remote Git repository into your configured skills source.
+Clone a whole remote Git repository into your configured skills source.
 
 Supported inputs:
 
@@ -325,7 +325,42 @@ Options:
 - `--branch <name>`: Clone a specific branch instead of auto-detecting the remote default branch
 - `--no-sync`: Skip running `capsync sync` after the clone finishes
 
-If the skills source already exists, CapSync prompts before replacing it. During override, it offers a backup when local changes would otherwise be lost.
+Behavior:
+
+- Treats `skills_source` as the checkout for one whole repository
+- If the same repo already exists, prompts to update in place or override with a fresh clone
+- Update fetches remote changes and hard-resets the local branch to its upstream
+- If the requested branch differs from the current local branch, CapSync asks for explicit confirmation before re-cloning instead of silently replacing the checkout
+- If the existing source is a different repo, a git repo without `origin`, or a plain directory, CapSync asks before replacing it
+- During override, it offers a backup when local changes would otherwise be lost
+
+### `capsync install <reference>`
+
+Install a single skill into your configured skills source from an explicit reference.
+
+Supported inputs in v1:
+
+- `https://skills.sh/owner/repo/skill-slug`
+- `https://github.com/owner/repo/tree/<branch>/path/to/skill`
+- `owner/repo/skill-slug`
+- `owner/repo/path/to/skill`
+
+Options:
+
+- `--no-sync`: Skip running `capsync sync` after the install finishes
+
+Behavior:
+
+- Installs exactly one skill into `skills_source/<slug>`
+- Uses a temporary git checkout to resolve and copy the skill directory
+- Refuses to install into a `skills_source` that is itself a git repository managed by `capsync clone`
+- Prompts before replacing an already-installed skill with the same slug
+- Leaves `commands_source` unchanged in v1
+
+Mental model:
+
+- `capsync clone ...` makes `skills_source` be a checkout of one whole repository
+- `capsync install ...` copies one selected skill into `skills_source/<slug>`
 
 ### `capsync add <tool>`
 
