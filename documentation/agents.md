@@ -46,7 +46,10 @@ A target tool's skills/commands location. Each destination has:
 A symbolic link. CapSync doesn't copy files—it creates symlinks from destination directories pointing to your source directory.
 
 ### Clone
-The `clone` command fetches a remote Git repository into your skills source, enabling CapSync to sync remote skills to local tools.
+The `clone` command makes your `skills_source` a checkout of one whole remote Git repository.
+
+### Install
+The `install` command copies one explicit skill into `skills_source/<slug>` without turning the whole source directory into a repo checkout.
 
 ---
 
@@ -154,11 +157,41 @@ capsync clone <repo> --no-sync       # Clone without syncing
 - If `skills_source` exists but is not a git repository: Prompt before overriding
 - If `skills_source` is a git repository without an `origin` remote: Prompt before overriding
 - If override would discard local changes: Warn and offer to back up first
-- If update is selected while the current branch differs from `--branch`: Re-clone the requested branch instead of updating in place
+- If update is selected while the current branch differs from `--branch`: Explain the mismatch and require explicit confirmation before re-cloning the requested branch
 
 **Branch Detection:**
 - Auto-detects the remote's default branch from remote HEAD
 - Falls back to fetched branch names only if the remote does not report a default branch
+
+### `capsync install <reference>`
+
+Install one skill into your skills source from an explicit reference.
+
+```bash
+capsync install <reference>           # Install and sync
+capsync install <reference> --no-sync # Install without syncing
+```
+
+**Arguments:**
+- `<reference>`: Explicit skill reference in one of these forms:
+  - `https://skills.sh/owner/repo/skill-slug`
+  - `https://github.com/owner/repo/tree/<branch>/path/to/skill`
+  - `owner/repo/skill-slug`
+  - `owner/repo/path/to/skill`
+
+**Behavior:**
+- Resolves exactly one skill from the provided reference
+- Uses a temporary git checkout and copies the selected skill into `skills_source/<slug>`
+- Rejects `http://skills.sh/...`; HTTPS is required for `skills.sh` references
+- For GitHub tree URLs, branch names containing `/` must be URL-encoded in the branch segment (for example `feature%2Fmy-branch`)
+- Prompts before replacing an already-installed skill with the same slug
+- Runs `capsync sync` automatically unless `--no-sync` is passed
+- Leaves `commands_source` unchanged in v1
+
+**Constraints:**
+- v1 does not browse or search the public skills catalog
+- v1 does not install commands
+- v1 refuses to install into a `skills_source` that is itself a git repository managed by `capsync clone`
 
 ---
 
@@ -299,12 +332,24 @@ After (with CapSync):
 1. Parse repo URL (`owner/repo` or full URL)
 2. Determine default branch (fetch remote refs)
 3. Handle existing source:
-   - Same repo → offer update (git pull) or override
+   - Same repo → offer update (fetch + hard reset to upstream) or override
    - Different repo → offer override
    - Non-git directory or no `origin` remote → require explicit confirmation before override
+   - Requested branch differs from current local branch during update → require explicit confirmation before re-cloning
    - Local changes during override → warn and offer backup
 4. Clone to `skills_source`
 5. Optionally sync to all enabled tools
+
+### Install Workflow
+
+1. Parse an explicit skill reference
+2. Resolve it to a repo URL plus a concrete skill selector
+3. Clone the repo to a temporary checkout
+4. Find exactly one skill directory containing `SKILL.md`
+5. Copy that skill into `skills_source/<slug>`
+6. Optionally sync to all enabled tools
+
+Unlike `clone`, this does not make `skills_source` a repo checkout. It only installs one selected skill into the managed source directory.
 
 ---
 
@@ -378,6 +423,7 @@ capsync/
 │   ├── config.rs    # Config loading/saving
 │   ├── clone.rs    # Git clone functionality
 │   ├── detect.rs   # Tool detection
+│   ├── install.rs  # Explicit skill install service
 │   ├── sync.rs     # Symlink management
 │   └── tools.rs    # Supported tools list
 ├── Cargo.toml
@@ -397,6 +443,9 @@ capsync/
 | "Skills source not found" | Source path doesn't exist | Check config or run `capsync clone` |
 | "Repository not found" | Invalid repo URL | Check URL format: `owner/repo` |
 | "Failed to clone" | Network/auth error | Check internet connection |
+| "Install requires a concrete skill reference" | Repo-only ref provided | Use `owner/repo/skill-slug` or a GitHub tree URL |
+| "HTTP skills.sh references are not supported" | Tried to use `http://skills.sh/...` | Switch to `https://skills.sh/...` |
+| "Skills source is currently a git repository" | Tried to install into clone-managed source | Use a different `skills_source` or continue using `capsync clone` |
 
 ---
 

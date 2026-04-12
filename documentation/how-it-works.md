@@ -42,6 +42,12 @@ Reads and writes your settings to `~/.config/capsync/config.toml`. It's just a T
 **`detect.rs`** - The Finder
 Scans your computer for installed AI tools. Just checks if directories exist. Fast, simple, non-invasive.
 
+**`clone.rs`** - The Repo Materializer
+Handles whole-repository cloning into `skills_source`, including update vs override prompts, branch selection, and safety checks around replacing an existing checkout.
+
+**`install.rs`** - The Skill Materializer
+Handles installing one explicit skill reference into `skills_source/<slug>` by cloning to a temporary checkout, selecting a skill directory, and copying it into the managed source tree.
+
 **`sync.rs`** - The Worker
 Actually creates and removes symlinks. Handles the messy platform differences (Unix vs Windows). Reports what worked and what didn't.
 
@@ -54,14 +60,13 @@ A big list of all supported tools and where they keep their stuff. Currently 40+
 
 CapSync doesn't:
 
-- Download skills from the internet
 - Create skills for you
 - Validate your skill format
 - Have a GUI
 - Run as a daemon
 - Do anything fancy
 
-It just syncs. That's it. That's the feature.
+It does sync, and it can materialize remote content when you explicitly point it at a repository or a concrete skill reference. It still does not browse, rank, or discover skills for you.
 
 ### Why Symlinks?
 
@@ -122,6 +127,54 @@ Synced successfully:
 ```
 
 If something fails, it tells you. But keeps going with the others.
+
+### `capsync clone <repo>` - Make `skills_source` a Repo Checkout
+
+Use clone when your `skills_source` should be one whole Git repository.
+
+```bash
+$ capsync clone vercel-labs/skills
+Fetching remote branch info...
+Using branch: main
+Cloning into /Users/you/my-skills...
+Successfully cloned vercel-labs/skills (branch: main)
+Running sync...
+```
+
+Key behavior:
+
+- Supports `owner/repo`, `owner/repo.git`, `https://...`, `http://...`, and `git@...`
+- Auto-detects the remote default branch unless `--branch` is provided
+- If the same repo is already present, offers update or override
+- Update is implemented as fetch + hard reset to upstream, not a merge-based pull
+- If the requested branch differs from the current local branch, it requires explicit confirmation before re-cloning
+
+### `capsync install <reference>` - Copy One Skill Into `skills_source`
+
+Use install when you want one skill from a repo, not the whole repo.
+
+```bash
+$ capsync install vercel-labs/skills/find-skills
+Fetching skill source...
+Installed skill 'find-skills' to /Users/you/my-skills/find-skills
+Running sync...
+```
+
+Supported explicit references in v1:
+
+- `https://skills.sh/owner/repo/skill-slug`
+- `https://github.com/owner/repo/tree/<branch>/path/to/skill`
+- `owner/repo/skill-slug`
+- `owner/repo/path/to/skill`
+
+Key behavior:
+
+- Rejects repo-only refs like `owner/repo`
+- Rejects `http://skills.sh/...`; HTTPS is required for `skills.sh` references
+- For GitHub tree URLs, branch names containing `/` must be URL-encoded in the branch segment (for example `feature%2Fmy-branch`)
+- Clones to a temporary checkout, finds exactly one skill directory, then copies it into `skills_source/<slug>`
+- Refuses to install into a `skills_source` that is itself a git repo managed by `capsync clone`
+- Leaves `commands_source` untouched in v1
 
 ### `capsync add <tool>` - Add New Tools
 
@@ -219,16 +272,21 @@ $ capsync remove claude
 Located at `~/.config/capsync/config.toml`. Looks like this:
 
 ```toml
-source = "/Users/you/my-skills"
+skills_source = "/Users/you/my-skills"
+commands_source = "/Users/you/my-skills/commands"
 
 [destinations.claude]
 enabled = true
-path = "/Users/you/.claude/skills"
+skills_path = "/Users/you/.claude/skills"
+commands_path = "/Users/you/.claude/commands"
 
 [destinations.opencode]
 enabled = true
-path = "/Users/you/.config/opencode/skill"
+skills_path = "/Users/you/.config/opencode/skill"
+commands_path = "/Users/you/.config/opencode/commands"
 ```
+
+The legacy keys `source` and destination `path` are still accepted for backward compatibility, but the canonical config fields are `skills_source`, `commands_source`, `skills_path`, and `commands_path`.
 
 You can edit this by hand. It's just TOML. Add tools, remove them, change paths. CapSync will respect whatever's there.
 
@@ -248,7 +306,7 @@ They break in some terminals. They're distracting. Plain text works everywhere.
 
 ### Why No Skill Discovery?
 
-CapSync doesn't download skills from the internet. That's a different problem. Maybe someday, but for now we solve the sync problem really well.
+CapSync still does not browse or rank a public catalog for you. But it can now materialize remote content when you provide an explicit repo (`capsync clone`) or an explicit skill reference (`capsync install`).
 
 ### Why TOML for Config?
 
@@ -308,7 +366,7 @@ Simple. Fast. Works.
 
 **What It Won't Do:**
 
-- Download skills from a registry
+- Browse or search a public skills registry for you
 - Validate your skill format
 - Sync to remote machines (SSH, etc.)
 - Run as a background service

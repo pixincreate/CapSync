@@ -1,6 +1,7 @@
 use crate::clone::{CloneAction, CloneOptions, clone_skills};
 use crate::config::{self, Config, DestinationConfig};
 use crate::detect::ToolDetector;
+use crate::install::{InstallOptions, install_skill};
 use crate::sync::SyncManager;
 use crate::tools::{all_tools, get_tool};
 use anyhow::{Context, Result, anyhow};
@@ -56,6 +57,16 @@ pub enum Commands {
         #[arg(long)]
         no_sync: bool,
     },
+    #[command(about = "Install a skill from an explicit reference")]
+    Install {
+        #[arg(
+            help = "Skill reference (HTTPS skills.sh URL, GitHub tree URL, or owner/repo/skill)"
+        )]
+        reference: String,
+        #[arg(long)]
+        #[arg(help = "Skip syncing after install")]
+        no_sync: bool,
+    },
 }
 
 pub fn run() -> Result<()> {
@@ -81,6 +92,7 @@ pub fn run() -> Result<()> {
             branch,
             no_sync,
         } => clone_repo(&repo, branch, no_sync),
+        Commands::Install { reference, no_sync } => install_from_reference(&reference, no_sync),
         Commands::Status => show_status(),
     }
 }
@@ -362,6 +374,51 @@ fn clone_repo(repo: &str, branch: Option<String>, no_sync: bool) -> Result<()> {
             }
             println!("\nSkills cloned successfully!");
         }
+    }
+
+    if !no_sync {
+        println!("\nRunning sync...");
+        sync_all()?;
+    } else {
+        println!("\nSkipped sync (--no-sync passed). Run 'capsync sync' manually to sync.");
+    }
+
+    Ok(())
+}
+
+fn install_from_reference(reference: &str, no_sync: bool) -> Result<()> {
+    let config = match config::load_config() {
+        Ok(c) => c,
+        Err(e) => {
+            let config_path = config::get_config_path();
+            if !config_path.exists() {
+                println!("No configuration found. Running init first...");
+                init_config()?;
+                config::load_config()?
+            } else {
+                return Err(e).context("Failed to load config");
+            }
+        }
+    };
+
+    let options = InstallOptions {
+        reference: reference.to_string(),
+    };
+
+    let result = install_skill(&options, &config)?;
+
+    if result.replaced_existing {
+        println!(
+            "\nReplaced installed skill '{}' at {}",
+            result.skill_slug,
+            result.installed_path.display()
+        );
+    } else {
+        println!(
+            "\nInstalled skill '{}' to {}",
+            result.skill_slug,
+            result.installed_path.display()
+        );
     }
 
     if !no_sync {
