@@ -59,7 +59,9 @@ pub enum Commands {
     },
     #[command(about = "Install a skill from an explicit reference")]
     Install {
-        #[arg(help = "Skill reference (skills.sh URL, GitHub tree URL, or owner/repo/skill)")]
+        #[arg(
+            help = "Skill reference (HTTPS skills.sh URL, GitHub tree URL, or owner/repo/skill)"
+        )]
         reference: String,
         #[arg(long)]
         #[arg(help = "Skip syncing after install")]
