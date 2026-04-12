@@ -182,6 +182,8 @@ capsync install <reference> --no-sync # Install without syncing
 **Behavior:**
 - Resolves exactly one skill from the provided reference
 - Uses a temporary git checkout and copies the selected skill into `skills_source/<slug>`
+- Rejects `http://skills.sh/...`; HTTPS is required for `skills.sh` references
+- For GitHub tree URLs, branch names containing `/` must be URL-encoded in the branch segment (for example `feature%2Fmy-branch`)
 - Prompts before replacing an already-installed skill with the same slug
 - Runs `capsync sync` automatically unless `--no-sync` is passed
 - Leaves `commands_source` unchanged in v1
@@ -442,6 +444,7 @@ capsync/
 | "Repository not found" | Invalid repo URL | Check URL format: `owner/repo` |
 | "Failed to clone" | Network/auth error | Check internet connection |
 | "Install requires a concrete skill reference" | Repo-only ref provided | Use `owner/repo/skill-slug` or a GitHub tree URL |
+| "HTTP skills.sh references are not supported" | Tried to use `http://skills.sh/...` | Switch to `https://skills.sh/...` |
 | "Skills source is currently a git repository" | Tried to install into clone-managed source | Use a different `skills_source` or continue using `capsync clone` |
 
 ---

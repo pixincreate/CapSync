@@ -353,6 +353,8 @@ Behavior:
 
 - Installs exactly one skill into `skills_source/<slug>`
 - Uses a temporary git checkout to resolve and copy the skill directory
+- Rejects `http://skills.sh/...`; use HTTPS only
+- For GitHub tree URLs, branch names containing `/` must be URL-encoded in the branch segment (for example `feature%2Fmy-branch`)
 - Refuses to install into a `skills_source` that is itself a git repository managed by `capsync clone`
 - Prompts before replacing an already-installed skill with the same slug
 - Leaves `commands_source` unchanged in v1

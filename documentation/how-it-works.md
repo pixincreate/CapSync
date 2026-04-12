@@ -170,6 +170,8 @@ Supported explicit references in v1:
 Key behavior:
 
 - Rejects repo-only refs like `owner/repo`
+- Rejects `http://skills.sh/...`; HTTPS is required for `skills.sh` references
+- For GitHub tree URLs, branch names containing `/` must be URL-encoded in the branch segment (for example `feature%2Fmy-branch`)
 - Clones to a temporary checkout, finds exactly one skill directory, then copies it into `skills_source/<slug>`
 - Refuses to install into a `skills_source` that is itself a git repo managed by `capsync clone`
 - Leaves `commands_source` untouched in v1
