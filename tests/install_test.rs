@@ -4,6 +4,8 @@ use capsync::install::{
     install_skill_from_checkout, normalize_skill_slug, resolve_install_ref,
 };
 use std::fs;
+#[cfg(unix)]
+use std::os::unix::fs::symlink;
 use std::path::PathBuf;
 use tempfile::tempdir;
 
@@ -35,17 +37,12 @@ fn test_resolve_install_ref_skills_sh_url() {
 }
 
 #[test]
-fn test_resolve_install_ref_http_skills_sh_url() {
-    let resolved = resolve_install_ref("http://skills.sh/vercel-labs/skills/find-skills").unwrap();
+fn test_resolve_install_ref_rejects_http_skills_sh_url() {
+    let error = resolve_install_ref("http://skills.sh/vercel-labs/skills/find-skills").unwrap_err();
 
     assert_eq!(
-        resolved.repo_url,
-        "https://github.com/vercel-labs/skills.git"
-    );
-    assert_eq!(resolved.branch, None);
-    assert_eq!(
-        resolved.selector,
-        SkillSelector::Slug("find-skills".to_string())
+        error.to_string(),
+        "HTTP skills.sh references are not supported. Use https://skills.sh/owner/repo/skill-slug"
     );
 }
 
@@ -63,6 +60,48 @@ fn test_resolve_install_ref_github_tree_url() {
     assert_eq!(
         resolved.selector,
         SkillSelector::Path(PathBuf::from("skills/find-skills"))
+    );
+}
+
+#[test]
+fn test_resolve_install_ref_github_tree_url_requires_skill_path() {
+    let error = resolve_install_ref("https://github.com/vercel-labs/skills/tree/main").unwrap_err();
+
+    assert_eq!(
+        error.to_string(),
+        "GitHub tree URLs must point to a concrete skill directory"
+    );
+}
+
+#[test]
+fn test_resolve_install_ref_github_tree_url_decodes_encoded_branch_segment() {
+    let resolved = resolve_install_ref(
+        "https://github.com/vercel-labs/skills/tree/feature%2Ffind-skills/skills/find-skills",
+    )
+    .unwrap();
+
+    assert_eq!(
+        resolved.repo_url,
+        "https://github.com/vercel-labs/skills.git"
+    );
+    assert_eq!(resolved.branch, Some("feature/find-skills".to_string()));
+    assert_eq!(
+        resolved.selector,
+        SkillSelector::Path(PathBuf::from("skills/find-skills"))
+    );
+}
+
+#[test]
+fn test_resolve_install_ref_github_tree_url_rejects_invalid_percent_encoding() {
+    let error = resolve_install_ref(
+        "https://github.com/vercel-labs/skills/tree/feature%ZZ/skills/find-skills",
+    )
+    .unwrap_err();
+
+    assert!(
+        error
+            .to_string()
+            .contains("Invalid percent-encoding in GitHub tree URL component")
     );
 }
 
@@ -180,6 +219,39 @@ fn test_install_skill_from_checkout_by_explicit_path() {
 }
 
 #[test]
+fn test_install_skill_from_checkout_rejects_parent_dir_path() {
+    let checkout_dir = tempdir().unwrap();
+    let target_dir = tempdir().unwrap();
+
+    let escaped_skill_dir = checkout_dir
+        .path()
+        .parent()
+        .unwrap()
+        .join("escaped-skill-for-test");
+    write_skill(
+        &escaped_skill_dir,
+        "Escaped Skill",
+        "Should not be reachable",
+    );
+
+    let resolved = ResolvedInstallRef {
+        repo_url: "https://github.com/vercel-labs/skills.git".to_string(),
+        branch: None,
+        selector: SkillSelector::Path(PathBuf::from("../escaped-skill-for-test")),
+    };
+
+    let error =
+        install_skill_from_checkout(checkout_dir.path(), &resolved, target_dir.path()).unwrap_err();
+    assert!(
+        error
+            .to_string()
+            .contains("Skill path must be a relative path within the checkout")
+    );
+
+    fs::remove_dir_all(escaped_skill_dir).unwrap();
+}
+
+#[test]
 fn test_install_skill_from_checkout_errors_on_missing_skill() {
     let checkout_dir = tempdir().unwrap();
     let target_dir = tempdir().unwrap();
@@ -273,4 +345,66 @@ fn test_install_skill_rejects_git_repo_skills_source() {
             .to_string()
             .contains("Skills source is currently a git repository")
     );
+}
+
+#[cfg(unix)]
+#[test]
+fn test_install_skill_from_checkout_rejects_symlinks() {
+    let checkout_dir = tempdir().unwrap();
+    let target_dir = tempdir().unwrap();
+
+    let skill_dir = checkout_dir.path().join("skills").join("find-skills");
+    write_skill(&skill_dir, "Find Skills", "Locate useful skills");
+    fs::write(checkout_dir.path().join("outside.txt"), "outside").unwrap();
+    symlink(
+        checkout_dir.path().join("outside.txt"),
+        skill_dir.join("linked.txt"),
+    )
+    .unwrap();
+
+    let resolved = ResolvedInstallRef {
+        repo_url: "https://github.com/vercel-labs/skills.git".to_string(),
+        branch: None,
+        selector: SkillSelector::Slug("find-skills".to_string()),
+    };
+
+    let error =
+        install_skill_from_checkout(checkout_dir.path(), &resolved, target_dir.path()).unwrap_err();
+    assert!(
+        error
+            .to_string()
+            .contains("Refusing to install skills containing symlinks")
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn test_install_skill_from_checkout_cleans_staging_dir_on_copy_failure() {
+    let checkout_dir = tempdir().unwrap();
+    let target_dir = tempdir().unwrap();
+
+    let skill_dir = checkout_dir.path().join("skills").join("find-skills");
+    write_skill(&skill_dir, "Find Skills", "Locate useful skills");
+    fs::write(checkout_dir.path().join("outside.txt"), "outside").unwrap();
+    symlink(
+        checkout_dir.path().join("outside.txt"),
+        skill_dir.join("linked.txt"),
+    )
+    .unwrap();
+
+    let resolved = ResolvedInstallRef {
+        repo_url: "https://github.com/vercel-labs/skills.git".to_string(),
+        branch: None,
+        selector: SkillSelector::Slug("find-skills".to_string()),
+    };
+
+    let error =
+        install_skill_from_checkout(checkout_dir.path(), &resolved, target_dir.path()).unwrap_err();
+    assert!(
+        error
+            .to_string()
+            .contains("Refusing to install skills containing symlinks")
+    );
+    assert!(!target_dir.path().join("find-skills").exists());
+    assert_eq!(fs::read_dir(target_dir.path()).unwrap().count(), 0);
 }

@@ -4,7 +4,8 @@ use anyhow::{Context, Result, anyhow};
 use git2::Repository;
 use std::fs;
 use std::io::{self, Write};
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct InstallOptions {
@@ -36,14 +37,17 @@ pub fn resolve_install_ref(input: &str) -> Result<ResolvedInstallRef> {
 
     if trimmed_input.is_empty() {
         return Err(anyhow!(
-            "Install reference cannot be empty. Use a skills.sh URL, GitHub tree URL, or owner/repo/skill reference."
+            "Install reference cannot be empty. Use an HTTPS skills.sh URL, GitHub tree URL, or owner/repo/skill reference."
         ));
     }
 
-    if let Some(path) = trimmed_input
-        .strip_prefix("https://skills.sh/")
-        .or_else(|| trimmed_input.strip_prefix("http://skills.sh/"))
-    {
+    if trimmed_input.starts_with("http://skills.sh/") {
+        return Err(anyhow!(
+            "HTTP skills.sh references are not supported. Use https://skills.sh/owner/repo/skill-slug"
+        ));
+    }
+
+    if let Some(path) = trimmed_input.strip_prefix("https://skills.sh/") {
         let parts: Vec<&str> = path.split('/').filter(|part| !part.is_empty()).collect();
         if parts.len() == 3 {
             let owner = parts[0];
@@ -89,13 +93,13 @@ pub fn resolve_install_ref(input: &str) -> Result<ResolvedInstallRef> {
                 "Install requires a concrete skill reference, like owner/repo/skill-slug or owner/repo/path/to/skill"
             )),
             _ => Err(anyhow!(
-                "Unsupported install reference. Use a skills.sh URL, GitHub tree URL, or owner/repo/skill reference."
+                "Unsupported install reference. Use an HTTPS skills.sh URL, GitHub tree URL, or owner/repo/skill reference."
             )),
         };
     }
 
     Err(anyhow!(
-        "Unsupported install reference. Use a skills.sh URL, GitHub tree URL, or owner/repo/skill reference."
+        "Unsupported install reference. Use an HTTPS skills.sh URL, GitHub tree URL, or owner/repo/skill reference."
     ))
 }
 
@@ -110,7 +114,7 @@ fn resolve_github_tree_ref(input: &str) -> Result<Option<ResolvedInstallRef>> {
     let path = &normalized_input[prefix.len()..];
     let parts: Vec<&str> = path.split('/').filter(|part| !part.is_empty()).collect();
 
-    if parts.len() < 5 {
+    if parts.len() < 3 {
         return Ok(None);
     }
 
@@ -118,10 +122,25 @@ fn resolve_github_tree_ref(input: &str) -> Result<Option<ResolvedInstallRef>> {
         return Ok(None);
     }
 
+    if parts.len() == 4 {
+        return Err(anyhow!(
+            "GitHub tree URLs must point to a concrete skill directory"
+        ));
+    }
+
+    if parts.len() < 5 {
+        return Ok(None);
+    }
+
     let owner = parts[0];
     let repository_name = parts[1];
-    let branch_name = parts[3];
-    let skill_path = PathBuf::from(parts[4..].join("/"));
+    let branch_name = decode_url_path_component(parts[3])?;
+    let skill_path = parts[4..]
+        .iter()
+        .map(|segment| decode_url_path_component(segment))
+        .collect::<Result<Vec<_>>>()?
+        .join("/");
+    let skill_path = PathBuf::from(skill_path);
 
     if skill_path.as_os_str().is_empty() {
         return Err(anyhow!(
@@ -131,9 +150,42 @@ fn resolve_github_tree_ref(input: &str) -> Result<Option<ResolvedInstallRef>> {
 
     Ok(Some(ResolvedInstallRef {
         repo_url: format!("https://github.com/{owner}/{repository_name}.git"),
-        branch: Some(branch_name.to_string()),
+        branch: Some(branch_name),
         selector: SkillSelector::Path(skill_path),
     }))
+}
+
+fn decode_url_path_component(component: &str) -> Result<String> {
+    let bytes = component.as_bytes();
+    let mut decoded = String::with_capacity(component.len());
+    let mut index = 0;
+
+    while index < bytes.len() {
+        if bytes[index] == b'%' {
+            if index + 2 >= bytes.len() {
+                return Err(anyhow!(
+                    "Invalid percent-encoding in GitHub tree URL component: {}",
+                    component
+                ));
+            }
+
+            let hex = &component[index + 1..index + 3];
+            let value = u8::from_str_radix(hex, 16).map_err(|_| {
+                anyhow!(
+                    "Invalid percent-encoding in GitHub tree URL component: {}",
+                    component
+                )
+            })?;
+            decoded.push(value as char);
+            index += 3;
+            continue;
+        }
+
+        decoded.push(bytes[index] as char);
+        index += 1;
+    }
+
+    Ok(decoded)
 }
 
 pub fn install_skill(options: &InstallOptions, config: &Config) -> Result<InstallResult> {
@@ -170,13 +222,66 @@ pub fn install_skill_from_checkout(
 
     let replaced_existing = if target_dir.exists() {
         prompt_replace_existing_skill(&skill_slug, &target_dir)?;
-        remove_existing_path(&target_dir)?;
         true
     } else {
         false
     };
 
-    copy_directory_recursive(&skill_source, &target_dir)?;
+    let unique_suffix = format!(
+        "{}-{}",
+        std::process::id(),
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .context("System clock is before UNIX_EPOCH")?
+            .as_nanos()
+    );
+    let staging_dir = target_root.join(format!(".{}.tmp-{}", skill_slug, unique_suffix));
+    let backup_dir = target_root.join(format!(".{}.bak-{}", skill_slug, unique_suffix));
+
+    if staging_dir.exists() {
+        remove_existing_path(&staging_dir)?;
+    }
+
+    if backup_dir.exists() {
+        remove_existing_path(&backup_dir)?;
+    }
+
+    if let Err(error) = copy_directory_recursive(&skill_source, &staging_dir) {
+        let _ = remove_existing_path(&staging_dir);
+        return Err(error);
+    }
+
+    if replaced_existing {
+        fs::rename(&target_dir, &backup_dir).with_context(|| {
+            format!(
+                "Failed to move existing skill out of the way from {} to {}",
+                target_dir.display(),
+                backup_dir.display()
+            )
+        })?;
+
+        if let Err(error) = fs::rename(&staging_dir, &target_dir).with_context(|| {
+            format!(
+                "Failed to move staged skill into place from {} to {}",
+                staging_dir.display(),
+                target_dir.display()
+            )
+        }) {
+            let _ = fs::rename(&backup_dir, &target_dir);
+            let _ = remove_existing_path(&staging_dir);
+            return Err(error);
+        }
+
+        remove_existing_path(&backup_dir)?;
+    } else {
+        fs::rename(&staging_dir, &target_dir).with_context(|| {
+            format!(
+                "Failed to move staged skill into place from {} to {}",
+                staging_dir.display(),
+                target_dir.display()
+            )
+        })?;
+    }
 
     Ok(InstallResult {
         skill_slug,
@@ -208,13 +313,50 @@ fn resolve_skill_source(
     resolved_reference: &ResolvedInstallRef,
 ) -> Result<PathBuf> {
     match &resolved_reference.selector {
-        SkillSelector::Path(skill_path) => {
-            let skill_root = checkout_root.join(skill_path);
-            validate_skill_directory(&skill_root)?;
-            Ok(skill_root)
-        }
+        SkillSelector::Path(skill_path) => resolve_checked_skill_path(checkout_root, skill_path),
         SkillSelector::Slug(skill_slug) => find_skill_directory_by_slug(checkout_root, skill_slug),
     }
+}
+
+fn resolve_checked_skill_path(checkout_root: &Path, skill_path: &Path) -> Result<PathBuf> {
+    if skill_path.is_absolute()
+        || skill_path.components().any(|component| {
+            matches!(
+                component,
+                Component::ParentDir | Component::RootDir | Component::Prefix(_)
+            )
+        })
+    {
+        return Err(anyhow!(
+            "Skill path must be a relative path within the checkout: {}",
+            skill_path.display()
+        ));
+    }
+
+    let skill_root = checkout_root.join(skill_path);
+    validate_skill_directory(&skill_root)?;
+
+    let canonical_checkout_root = fs::canonicalize(checkout_root).with_context(|| {
+        format!(
+            "Failed to canonicalize checkout root: {}",
+            checkout_root.display()
+        )
+    })?;
+    let canonical_skill_root = fs::canonicalize(&skill_root).with_context(|| {
+        format!(
+            "Failed to canonicalize skill path: {}",
+            skill_root.display()
+        )
+    })?;
+
+    if !canonical_skill_root.starts_with(&canonical_checkout_root) {
+        return Err(anyhow!(
+            "Skill path escapes the checkout root: {}",
+            skill_path.display()
+        ));
+    }
+
+    Ok(skill_root)
 }
 
 fn validate_skill_directory(path: &Path) -> Result<()> {
@@ -435,6 +577,11 @@ fn copy_directory_recursive(source: &Path, destination: &Path) -> Result<()> {
 
         if file_type.is_dir() {
             copy_directory_recursive(&source_path, &destination_path)?;
+        } else if file_type.is_symlink() {
+            return Err(anyhow!(
+                "Refusing to install skills containing symlinks: {}",
+                source_path.display()
+            ));
         } else {
             fs::copy(&source_path, &destination_path).with_context(|| {
                 format!(
