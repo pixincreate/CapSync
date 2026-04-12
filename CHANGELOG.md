@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+- Darwin release builds now vendor `libgit2` and OpenSSL through `git2`, avoiding macOS OpenSSL discovery failures during tagged release builds
+
 ## [2.2.0] - 2026-04-12
 
 ### Added
