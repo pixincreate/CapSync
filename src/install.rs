@@ -1,5 +1,5 @@
-use crate::clone::clone_to_path;
 use crate::config::Config;
+use crate::git::clone_to_path;
 use anyhow::{Context, Result, anyhow};
 use git2::Repository;
 use std::fs;

@@ -1,4 +1,7 @@
+pub use crate::git::{clone_to_path, get_remote_default_branch};
+
 use crate::config::Config;
+use crate::git::build_fetch_options;
 use anyhow::{Context, Result, anyhow};
 use git2::Repository;
 use std::io::{self, Write};
@@ -93,86 +96,6 @@ pub fn parse_repo_url(input: &str) -> Result<String> {
     }
 }
 
-pub fn get_remote_default_branch(url: &str) -> Result<String> {
-    let temp_dir = tempfile::tempdir().context("Failed to create temporary directory")?;
-
-    let repository =
-        Repository::init(temp_dir.path()).context("Failed to initialize temp repository")?;
-
-    let mut remote = repository
-        .remote_anonymous(url)
-        .context("Failed to create remote")?;
-
-    remote
-        .connect(git2::Direction::Fetch)
-        .context("Failed to connect to remote")?;
-
-    if let Ok(default_branch) = remote.default_branch() {
-        remote.disconnect().context("Failed to disconnect remote")?;
-
-        let branch_name = default_branch
-            .as_str()
-            .context("Failed to read default branch name")?
-            .trim_start_matches("refs/heads/")
-            .to_string();
-
-        if !branch_name.is_empty() {
-            return Ok(branch_name);
-        }
-    } else {
-        remote.disconnect().context("Failed to disconnect remote")?;
-    }
-
-    let mut fetch_options = git2::FetchOptions::new();
-    fetch_options.download_tags(git2::AutotagOption::All);
-
-    let remote_name = remote.name().unwrap_or("origin");
-    let refspec = format!("+refs/heads/*:refs/remotes/{}/*", remote_name);
-
-    remote
-        .fetch(&[&refspec], Some(&mut fetch_options), None)
-        .context("Failed to fetch from remote")?;
-
-    let default_branch = find_default_branch(&repository)?;
-
-    Ok(default_branch)
-}
-
-fn find_default_branch(repository: &Repository) -> Result<String> {
-    let branches = repository.branches(Some(git2::BranchType::Remote))?;
-
-    let mut candidates: Vec<(String, bool)> = Vec::new();
-
-    for branch_result in branches {
-        let (branch, _) = branch_result.context("Failed to iterate branches")?;
-        let name_result = branch.name().context("Failed to get branch name")?;
-        if let Some(branch_name) = name_result {
-            if branch_name.ends_with("/HEAD") {
-                continue;
-            }
-            let is_main = branch_name == "origin/main";
-            let is_master = branch_name == "origin/master";
-            let is_preferred = is_main || is_master;
-            candidates.push((branch_name.to_string(), is_preferred));
-        }
-    }
-
-    candidates.sort_by(|candidate_a, candidate_b| {
-        let (_, a_is_preferred) = candidate_a;
-        let (_, b_is_preferred) = candidate_b;
-        match (a_is_preferred, b_is_preferred) {
-            (true, false) => std::cmp::Ordering::Less,
-            (false, true) => std::cmp::Ordering::Greater,
-            _ => candidate_a.0.cmp(&candidate_b.0),
-        }
-    });
-
-    candidates
-        .first()
-        .map(|(branch_name, _)| branch_name.trim_start_matches("origin/").to_string())
-        .ok_or_else(|| anyhow!("No branches found in remote repository"))
-}
-
 pub fn has_unpushed_changes(path: &Path) -> bool {
     let repository = match Repository::open(path) {
         Ok(repo) => repo,
@@ -259,24 +182,6 @@ pub fn backup_existing(source: &Path) -> Result<PathBuf> {
     Ok(backup_path)
 }
 
-pub fn clone_to_path(url: &str, branch: &str, target: &Path) -> Result<()> {
-    let mut fetch_options = git2::FetchOptions::new();
-    fetch_options.download_tags(git2::AutotagOption::All);
-
-    let mut builder = git2::build::RepoBuilder::new();
-    builder.fetch_options(fetch_options);
-
-    if !branch.is_empty() {
-        builder.branch(branch);
-    }
-
-    builder
-        .clone(url, target)
-        .context(format!("Failed to clone from {}", url))?;
-
-    Ok(())
-}
-
 pub fn update_existing(path: &Path) -> Result<()> {
     let repository = Repository::open(path).context("Failed to open existing repository")?;
 
@@ -286,8 +191,7 @@ pub fn update_existing(path: &Path) -> Result<()> {
         ));
     }
 
-    let mut fetch_options = git2::FetchOptions::new();
-    fetch_options.download_tags(git2::AutotagOption::All);
+    let mut fetch_options = build_fetch_options();
 
     let remotes = repository.remotes().context("Failed to get remotes")?;
 
