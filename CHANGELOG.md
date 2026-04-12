@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.2.2] - 2026-04-12
+
+### Added
+
+- Shared `git` transport plumbing for clone/install flows, centralizing repository clone, remote-branch detection, and credential callback handling
+
+### Changed
+
+- `capsync clone` and `capsync install` now use the same low-level git transport layer instead of keeping duplicate git plumbing in service-specific modules
+- The binary entrypoint now calls into the library crate directly, removing duplicate module declarations and duplicate unit-test execution during validation
+
+### Fixed
+
+- Public GitHub clone/install flows now honor git2 credential callbacks consistently, avoiding `authentication required but no callback set` failures in environments that rewrite HTTPS remotes to SSH or otherwise require transport auth negotiation
+
 ## [2.2.1] - 2026-04-12
 
 - Darwin release builds now vendor `libgit2` and OpenSSL through `git2`, avoiding macOS OpenSSL discovery failures during tagged release builds
