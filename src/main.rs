@@ -2,6 +2,7 @@ mod cli;
 mod clone;
 mod config;
 mod detect;
+mod install;
 mod sync;
 mod tools;
 
