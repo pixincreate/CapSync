@@ -6,6 +6,32 @@ All notable changes to this project will be documented in this file.
 
 ## [2.2.0] - 2026-04-12
 
+### Added
+
+- `capsync clone <repo>` to materialize a whole remote skills repository into `skills_source`
+  - Supports `owner/repo`, `owner/repo.git`, HTTPS, and SSH references
+  - Resolves the remote default branch automatically and syncs after clone by default
+- `capsync install <reference>` to install a single skill into `skills_source/<slug>`
+  - Supports explicit HTTPS `skills.sh` URLs, GitHub tree URLs, and `owner/repo/...` references
+  - Resolves one concrete skill from a temporary checkout and syncs after install by default
+- New clone/install coverage and expanded technical documentation for workflow, configuration, and safety behavior
+
+### Changed
+
+- Expanded README and technical documentation to explain the clone vs install mental model and current workflow limitations
+- Renamed `documentation/detailed-working.md` to `documentation/how-it-works.md`
+- Updated dependencies:
+  - `toml` `1.0.3+spec-1.1.0` → `1.1.2+spec-1.1.0`
+  - `tempfile` `3.25.0` → `3.27.0`
+  - `clap` `4.5.60` → `4.6.0`
+  - `shellexpand` `3.1.1` → `3.1.2`
+
+### Fixed
+
+- Supported-agent registry path mappings for Amp, Antigravity, GitHub Copilot, Kimi CLI, OpenClaw, Pi, Replit, Trae CN, and Windsurf
+- Clone safety and correctness around same-repo detection, default-branch resolution, repo-without-origin handling, and branch-mismatch confirmation before re-cloning
+- Install safety around HTTP `skills.sh` rejection, GitHub tree URL validation, URL-encoded branch handling, path traversal guards, symlink rejection, and staged replacement of existing installs
+
 ## [2.0.1] - 2026-02-22
 
 ### Added
