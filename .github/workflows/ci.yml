@@ -115,6 +115,12 @@ jobs:
       - name: Run tests (release)
         run: cargo test --release --all-features --all-targets
 
+      - name: Smoke test cargo install
+        if: ${{ runner.os == 'Linux' }}
+        env:
+          CARGO_TARGET_DIR: /tmp/capsync-install-target
+        run: cargo install --path . --locked --force
+
       - name: Run Clippy
         run: cargo clippy --all-features --all-targets
 
