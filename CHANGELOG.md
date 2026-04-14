@@ -18,6 +18,7 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 
 - Public GitHub clone/install flows now honor git2 credential callbacks consistently, avoiding `authentication required but no callback set` failures in environments that rewrite HTTPS remotes to SSH or otherwise require transport auth negotiation
+- Linux installs no longer force vendored OpenSSL builds by default; vendored `git2`/OpenSSL is now limited to macOS so `cargo install` does not depend on Perl-based OpenSSL source builds on Linux
 
 ## [2.2.1] - 2026-04-12
 
