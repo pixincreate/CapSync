@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.2.3] - 2026-04-14
+
+### Changed
+
+- Ubuntu CI now smoke-tests `cargo install --path . --locked --force`, covering the packaged install path in addition to normal build/test jobs
+- The install smoke test now runs across the current CI matrix environments instead of only Linux
+- Fix build in Linux system
+
 ## [2.2.2] - 2026-04-12
 
 ### Added
