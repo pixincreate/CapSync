@@ -140,8 +140,8 @@ pub fn has_unpushed_changes(path: &Path) -> bool {
     };
 
     let branch_name = match head.shorthand() {
-        Some(name) => name,
-        None => return false,
+        Ok(name) => name,
+        Err(_) => return false,
     };
 
     let local_branch = match repository.find_branch(branch_name, git2::BranchType::Local) {
@@ -195,7 +195,11 @@ pub fn update_existing(path: &Path) -> Result<()> {
 
     let remotes = repository.remotes().context("Failed to get remotes")?;
 
-    for remote_name in remotes.iter().flatten() {
+    for remote_name in remotes.iter() {
+        let remote_name = match remote_name {
+            Ok(Some(name)) => name,
+            _ => continue,
+        };
         let mut remote = repository
             .find_remote(remote_name)
             .with_context(|| format!("Failed to find remote '{}'", remote_name))?;
@@ -208,9 +212,7 @@ pub fn update_existing(path: &Path) -> Result<()> {
 
     let head = repository.head().context("Failed to get HEAD")?;
 
-    let branch_name = head
-        .shorthand()
-        .ok_or_else(|| anyhow!("Cannot determine branch name"))?;
+    let branch_name = head.shorthand().context("Cannot determine branch name")?;
 
     if let Ok(local_branch) = repository.find_branch(branch_name, git2::BranchType::Local) {
         if let Ok(upstream_branch) = local_branch.upstream() {
@@ -234,7 +236,12 @@ pub fn update_existing(path: &Path) -> Result<()> {
 pub fn get_remote_url(path: &Path) -> Result<Option<String>> {
     let repository = Repository::open(path).context("Failed to open repository")?;
     match repository.find_remote("origin") {
-        Ok(remote) => Ok(remote.url().map(|url_string| url_string.to_string())),
+        Ok(remote) => Ok(Some(
+            remote
+                .url()
+                .context("Failed to get remote URL")?
+                .to_string(),
+        )),
         Err(e) if e.code() == git2::ErrorCode::NotFound => Ok(None),
         Err(e) => Err(e).context("Failed to find origin remote"),
     }
@@ -253,7 +260,7 @@ fn current_branch_name(repository: &Repository) -> Result<String> {
         .head()
         .context("Failed to get HEAD")?
         .shorthand()
-        .ok_or_else(|| anyhow!("Cannot determine branch name"))
+        .context("Cannot determine branch name")
         .map(str::to_string)
 }
 
