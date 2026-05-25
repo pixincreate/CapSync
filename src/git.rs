@@ -43,7 +43,7 @@ pub fn get_remote_default_branch(url: &str) -> Result<String> {
 
     let mut fetch_options = build_fetch_options();
 
-    let remote_name = remote.name().unwrap_or("origin");
+    let remote_name = remote.name()?.unwrap_or("origin");
     let refspec = format!("+refs/heads/*:refs/remotes/{}/*", remote_name);
 
     remote
