@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.2.4] - 2026-07-03
+
+### Added
+
+- Support for 32 additional global skill destinations: Aider Desk, Antigravity CLI, Antigravity IDE, AstrBot, Autohand Code, Bob, Claude Code, CodeArts Agent, CodeMaker, CodeStudio, DeepAgents, Devin, Dexto, Firebender, ForgeCode, Hermes Agent, Inference.sh, Jazz, Kimi Code CLI, Lingma, Loaf, Moxby, Ona, Qoder CN, Reasonix, Rovo Dev, Tabnine CLI, Terramind, TinyCloud, Warp, Zed, and Zenflow
+
 ## [2.2.3] - 2026-04-14
 
 ### Changed
