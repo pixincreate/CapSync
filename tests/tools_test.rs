@@ -79,6 +79,49 @@ fn test_common_tools_exist() {
 }
 
 #[test]
+fn test_external_supported_tools_exist() {
+    let tools = all_tools();
+    let names: Vec<_> = tools.iter().map(|t| t.name).collect();
+
+    for name in [
+        "aider-desk",
+        "antigravity-cli",
+        "antigravity-ide",
+        "astrbot",
+        "autohand-code",
+        "bob",
+        "claude-code",
+        "codearts-agent",
+        "codemaker",
+        "codestudio",
+        "deepagents",
+        "devin",
+        "dexto",
+        "firebender",
+        "forgecode",
+        "hermes-agent",
+        "inference-sh",
+        "jazz",
+        "kimi-code-cli",
+        "lingma",
+        "loaf",
+        "moxby",
+        "ona",
+        "qoder-cn",
+        "reasonix",
+        "rovodev",
+        "tabnine-cli",
+        "terramind",
+        "tinycloud",
+        "warp",
+        "zed",
+        "zenflow",
+    ] {
+        assert!(names.contains(&name), "missing tool: {name}");
+    }
+}
+
+#[test]
 fn test_supported_list_paths_match_registry() {
     let amp = get_tool("amp").unwrap();
     assert!(amp.config_path.ends_with(".config/agents"));
@@ -119,4 +162,21 @@ fn test_supported_list_paths_match_registry() {
     let windsurf = get_tool("windsurf").unwrap();
     assert!(windsurf.config_path.ends_with(".codeium/windsurf"));
     assert!(windsurf.skills_path.ends_with(".codeium/windsurf/skills"));
+
+    let claude_code = get_tool("claude-code").unwrap();
+    assert!(claude_code.config_path.ends_with(".claude"));
+    assert!(claude_code.skills_path.ends_with(".claude/skills"));
+    assert!(claude_code.commands_path.is_some());
+
+    let devin = get_tool("devin").unwrap();
+    assert!(devin.config_path.ends_with(".config/devin"));
+    assert!(devin.skills_path.ends_with(".config/devin/skills"));
+
+    let tabnine_cli = get_tool("tabnine-cli").unwrap();
+    assert!(tabnine_cli.config_path.ends_with(".tabnine"));
+    assert!(tabnine_cli.skills_path.ends_with(".tabnine/agent/skills"));
+
+    let zed = get_tool("zed").unwrap();
+    assert!(zed.config_path.ends_with(".config/zed"));
+    assert!(zed.skills_path.ends_with(".agents/skills"));
 }
