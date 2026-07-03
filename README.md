@@ -266,19 +266,19 @@ You can manually edit this file to:
 
 ## Supported Tools
 
-CapSync currently supports 40+ AI coding assistants:
+CapSync currently supports 70+ AI coding assistants:
 
-**A-C**: AdaL, Amp, Antigravity, Augment, Claude Code, Cline, CodeBuddy, Codex, Command Code, Continue, Cortex, Crush, Cursor
+**A-C**: AdaL, Aider Desk, Amp, Antigravity, Antigravity CLI, Antigravity IDE, AstrBot, Autohand Code, Augment, Bob, Claude, Claude Code, Cline, CodeArts Agent, CodeBuddy, CodeMaker, CodeStudio, Codex, Command Code, Continue, Cortex, Crush, Cursor
 
-**D-G**: Droid, Gemini CLI, GitHub Copilot, Goose
+**D-G**: DeepAgents, Devin, Dexto, Droid, Firebender, ForgeCode, Gemini CLI, GitHub Copilot, Goose
 
-**I-K**: iFlow CLI, Junie, Kilo Code, Kimi CLI, Kiro CLI, Kode
+**H-L**: Hermes Agent, iFlow CLI, Inference.sh, Jazz, Junie, Kilo Code, Kimi CLI, Kimi Code CLI, Kiro CLI, Kode, Lingma, Loaf
 
-**M-N**: MCPJam, Mistral Vibe, Moltbot, Mux, Neovate
+**M-O**: MCPJam, Mistral Vibe, Moltbot, Moxby, Mux, Neovate, Ona, OpenCode, OpenHands, OpenClaw
 
-**O-Q**: OpenCode, OpenHands, OpenClaw, Pi, Pochi, Qoder, Qwen Code
+**P-R**: Pi, Pochi, Qoder, Qoder CN, Qwen Code, Reasonix, Replit, Rovo Dev, Roo Code
 
-**R-Z**: Replit, Roo Code, Trae, Trae CN, Windsurf, Zencoder
+**T-Z**: Tabnine CLI, Terramind, TinyCloud, Trae, Trae CN, Warp, Windsurf, Zed, Zencoder, Zenflow
 
 ### Commands Support
 
