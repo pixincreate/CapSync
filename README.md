@@ -487,4 +487,8 @@ cargo run -- init
 
 ## License
 
-This project is dedicated to the public domain under the [CC0 1.0 Universal License](LICENSE).
+Copyright 2026 pixincreate.
+Licensed under the [Apache License, Version 2.0](LICENSE).
+Individual files and third-party material can specify different terms.
+Material published under CC0 1.0 Universal remains available under CC0.
+This includes unchanged material in later versions.
