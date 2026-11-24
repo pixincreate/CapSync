@@ -87,6 +87,8 @@ cargo install capsync
 
 ### Build from Source
 
+Building from source requires Rust 1.87 or later.
+
 ```bash
 git clone https://github.com/pixincreate/cap_sync.git
 cd cap_sync
@@ -266,19 +268,19 @@ You can manually edit this file to:
 
 ## Supported Tools
 
-CapSync currently supports 70+ AI coding assistants:
+CapSync supports 80 tool names:
 
 **A-C**: AdaL, Aider Desk, Amp, Antigravity, Antigravity CLI, Antigravity IDE, AstrBot, Autohand Code, Augment, Bob, Claude, Claude Code, Cline, CodeArts Agent, CodeBuddy, CodeMaker, CodeStudio, Codex, Command Code, Continue, Cortex, Crush, Cursor
 
-**D-G**: DeepAgents, Devin, Dexto, Droid, Firebender, ForgeCode, Gemini CLI, GitHub Copilot, Goose
+**D-G**: DeepAgents, Devin, Dexto, Droid, Firebender, ForgeCode, fx, Gemini CLI, GitHub Copilot, Goose, Grok Build
 
-**H-L**: Hermes Agent, iFlow CLI, Inference.sh, Jazz, Junie, Kilo Code, Kimi CLI, Kimi Code CLI, Kiro CLI, Kode, Lingma, Loaf
+**H-L**: Hermes Agent, iFlow CLI, Inference.sh, Jazz, Junie, Kilo Code, Kimchi, Kimi CLI, Kimi Code CLI, Kiro CLI, Kode, Lingma, Loaf
 
-**M-O**: MCPJam, Mistral Vibe, Moltbot, Moxby, Mux, Neovate, Ona, OpenCode, OpenHands, OpenClaw
+**M-O**: MCPJam, MiniMax Code, Mistral Vibe, Moltbot, Moxby, Mux, Neovate, Ona, OpenCode, OpenHands, OpenClaw
 
-**P-R**: Pi, Pochi, Qoder, Qoder CN, Qwen Code, Reasonix, Replit, Rovo Dev, Roo Code
+**P-S**: Pi, Pochi, Posit Assistant, Qoder, Qoder CN, Qwen Code, Reasonix, Replit, Rovo Dev, Roo Code, Sarvam Code
 
-**T-Z**: Tabnine CLI, Terramind, TinyCloud, Trae, Trae CN, Warp, Windsurf, Zed, Zencoder, Zenflow
+**T-Z**: Tabnine CLI, Terramind, TinyCloud, Trae, Trae CN, Warp, Windsurf, ZCode, Zed, Zencoder, Zenflow
 
 ### Commands Support
 

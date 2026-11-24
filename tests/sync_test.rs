@@ -59,18 +59,26 @@ fn test_sync_commands_fails_when_source_does_not_exist() {
 fn test_sync_commands_syncs_to_enabled_destinations() {
     let temp_dir = TempDir::new().unwrap();
     let commands_dir = temp_dir.path().join("commands");
+    let commands_dest = temp_dir.path().join("claude-commands");
     fs::create_dir_all(&commands_dir).unwrap();
+    fs::write(commands_dir.join("example.md"), "Example command").unwrap();
 
-    let config = create_test_config(
+    let mut config = create_test_config(
         Some("/tmp/skills"),
         Some(commands_dir.to_str().unwrap()),
         &[("claude", true)],
     );
+    config.destinations.get_mut("claude").unwrap().commands_path = Some(commands_dest.clone());
 
     let result = SyncManager::sync_commands(&config).unwrap();
 
     assert_eq!(result.successful.len(), 1);
     assert!(result.errors.is_empty());
+    assert_eq!(fs::read_link(&commands_dest).unwrap(), commands_dir);
+    assert_eq!(
+        fs::read_to_string(commands_dest.join("example.md")).unwrap(),
+        "Example command"
+    );
 }
 
 #[test]

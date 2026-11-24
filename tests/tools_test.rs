@@ -1,5 +1,89 @@
 use capsync::tools::{all_tools, get_tool};
 
+#[cfg(unix)]
+#[test]
+fn test_additional_tools_detect_and_sync_skills() {
+    use capsync::config::Config;
+    use std::{collections::HashMap, fs, process::Command};
+    use tempfile::TempDir;
+
+    for (name, config_subpath, skills_subpath) in [
+        ("fx", ".fx", ".agents/skills"),
+        ("grok", ".grok", ".grok/skills"),
+        ("kimchi", ".config/kimchi", ".config/kimchi/harness/skills"),
+        ("minimax-code", ".minimax", ".minimax/skills"),
+        (
+            "posit-assistant",
+            ".posit/assistant",
+            ".posit/assistant/skills",
+        ),
+        ("sarvam-code", ".sarvam", ".agents/skills"),
+        ("zcode", ".zcode", ".zcode/skills"),
+    ] {
+        let home = TempDir::new().unwrap();
+        let source = home.path().join("source");
+        let destination = home.path().join(skills_subpath);
+        let config_path = home.path().join(".config/capsync/config.toml");
+        fs::create_dir_all(source.join("example")).unwrap();
+        fs::write(source.join("example/SKILL.md"), "Example skill").unwrap();
+        fs::create_dir_all(config_path.parent().unwrap()).unwrap();
+        fs::write(
+            &config_path,
+            toml::to_string_pretty(&Config {
+                skills_source: source.clone(),
+                commands_source: None,
+                destinations: HashMap::new(),
+            })
+            .unwrap(),
+        )
+        .unwrap();
+
+        let run = |args: &[&str]| {
+            let output = Command::new(env!("CARGO_BIN_EXE_capsync"))
+                .args(args)
+                .env("HOME", home.path())
+                .output()
+                .unwrap();
+            assert!(
+                output.status.success(),
+                "{name} {args:?}: {}\n{}",
+                String::from_utf8_lossy(&output.stdout),
+                String::from_utf8_lossy(&output.stderr)
+            );
+            String::from_utf8(output.stdout).unwrap()
+        };
+
+        fs::create_dir_all(home.path().join(".agents/skills")).unwrap();
+        let detected = run(&["detect-tools"]);
+        assert!(!detected.lines().any(|line| line == name));
+        assert!(!detected.lines().any(|line| line == "fx"));
+        assert!(!detected.lines().any(|line| line == "sarvam-code"));
+
+        fs::create_dir_all(home.path().join(config_subpath)).unwrap();
+        assert!(
+            run(&["detect-tools"]).lines().any(|line| line == name),
+            "{name}: tool config directory is not detected"
+        );
+
+        run(&["add", name, "--no-sync"]);
+        let saved: Config = toml::from_str(&fs::read_to_string(&config_path).unwrap()).unwrap();
+        let tool = &saved.destinations[name];
+        assert!(tool.enabled);
+        assert_eq!(tool.skills_path, destination);
+        assert_eq!(tool.commands_path, None);
+        assert!(!destination.is_symlink());
+        assert!(!destination.join("example/SKILL.md").exists());
+
+        run(&["sync"]);
+        assert!(destination.is_symlink(), "{name}: no skills symlink");
+        assert_eq!(fs::read_link(&destination).unwrap(), source);
+        assert_eq!(
+            fs::read_to_string(destination.join("example/SKILL.md")).unwrap(),
+            "Example skill"
+        );
+    }
+}
+
 #[test]
 fn test_all_tools_returns_tools() {
     let tools = all_tools();

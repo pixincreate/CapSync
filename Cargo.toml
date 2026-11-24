@@ -1,6 +1,6 @@
 [package]
 name = "capsync"
-version = "2.2.4"
+version = "2.2.5"
 edition = "2024"
 authors = ["pa1nark"]
 description = "A simple tool to sync your AI coding skills across different tools."
@@ -9,7 +9,7 @@ repository = "https://github.com/pixincreate/CapSync"
 homepage = "https://github.com/pixincreate/CapSync"
 keywords = ["ai", "skills", "sync", "capabilities"]
 categories = ["command-line-utilities", "development-tools"]
-rust-version = "1.85"
+rust-version = "1.87"
 
 [[bin]]
 name = "capsync"

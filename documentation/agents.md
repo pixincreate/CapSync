@@ -234,16 +234,7 @@ You can manually edit the config file to:
 
 ### Skills Support
 
-CapSync supports 40+ AI coding assistants:
-
-| Category | Tools |
-|----------|-------|
-| A-C | AdaL, Amp, Antigravity, Augment, Claude Code, Cline, CodeBuddy, Codex, Command Code, Continue, Cortex, Crush, Cursor |
-| D-G | Droid, Gemini CLI, GitHub Copilot, Goose |
-| I-K | iFlow CLI, Junie, Kilo Code, Kimi CLI, Kiro CLI, Kode |
-| M-N | MCPJam, Mistral Vibe, Moltbot, Mux, Neovate |
-| O-Q | OpenCode, OpenHands, OpenClaw, Pi, Pochi, Qoder, Qwen Code |
-| R-Z | Replit, Roo Code, Trae, Trae CN, Windsurf, Zencoder |
+See the [supported tools list](../README.md#supported-tools) for all supported tool names.
 
 ### Commands Support
 
