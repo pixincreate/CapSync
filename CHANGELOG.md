@@ -4,6 +4,32 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.2.5] - 2026-11-24
+
+### Added
+
+- Support for seven additional global skill destinations: fx, Grok Build (`grok`), Kimchi (`kimchi`), MiniMax Code (`minimax-code`), Posit Assistant (`posit-assistant`), Sarvam Code (`sarvam-code`), and ZCode (`zcode`).
+
+### Changed
+
+- The package uses the Apache-2.0 license.
+  Material published under CC0 1.0 Universal remains available under CC0.
+- Update locked dependencies, including `clap`, `dirs`, `serde`, and `toml`.
+- Correct the minimum Rust version to `1.87` to match the existing `git2` dependency.
+
+### Fixed
+
+- Keep the command-sync test destination inside a temporary directory to protect user files.
+
+### Security
+
+- Update `libz-sys` to `1.1.33`, `url` to `2.5.9`, and `rustix` to `1.1.6` to resolve RUSTSEC-2026-0544, RUSTSEC-2026-0592, and RUSTSEC-2026-0486.
+
+### Upgrade notes
+
+- Existing configurations remain unchanged.
+  Run `capsync add <tool>` to enable an additional tool and sync its skills.
+
 ## [2.2.4] - 2026-07-03
 
 ### Added
