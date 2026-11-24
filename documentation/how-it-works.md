@@ -52,7 +52,7 @@ Handles installing one explicit skill reference into `skills_source/<slug>` by c
 Actually creates and removes symlinks. Handles the messy platform differences (Unix vs Windows). Reports what worked and what didn't.
 
 **`tools.rs`** - The Registry
-A big list of all supported tools and where they keep their stuff. Currently 40+ tools. Easy to add more.
+The tool registry defines each supported tool and its destination paths.
 
 ## How We Approach This
 
